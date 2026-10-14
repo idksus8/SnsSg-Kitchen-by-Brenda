@@ -224,6 +224,13 @@ dialog[open]::backdrop{animation:fade .25s ease}
   .reveal{opacity:1;transform:none}
 }
 .tb-r{display:flex;align-items:center;gap:8px}
+.paidbanner{background:var(--green);color:var(--green-ink);border-radius:10px;padding:10px 14px;font-weight:700;margin:4px 0 10px}
+.sumbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 12px}
+.sumbox ul{list-style:none;margin:0;padding:0}
+.sumbox li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line)}
+.sumbox li:last-child{border-bottom:0}
+.sumbox .sub{font-size:.88rem;color:var(--muted)}
+.sumbox .tot{display:flex;justify-content:space-between;font-weight:800;padding-top:8px;margin-top:4px;border-top:2px solid var(--line)}
 .about{background:var(--surface);border-bottom:1px solid var(--line)}
 .about-in{max-width:1120px;margin:0 auto;padding:40px 20px;display:grid;grid-template-columns:.8fr 1.2fr;gap:36px;align-items:center}
 .about-photo{border-radius:18px;overflow:hidden;border:3px solid var(--saffron);aspect-ratio:4/5;max-height:520px;justify-self:center;width:100%;max-width:420px}
@@ -376,7 +383,7 @@ var MENU = [
   {id:"beef", cat:"soups", name:"Beef Soup", price:25, img:4, desc:"Beef on the bone with potato, corn and cabbage."},
   {id:"chapati", cat:"chapati", name:"Chapati", price:2.5, img:3, desc:"Soft, flaky, golden chapati. Priced each.", unit:"each"},
   {id:"kisinia", cat:"fish", name:"Kisinia", price:30, img:5, desc:"Fried fish with tomato pepper sauce and shrimp, served with your choice of side.",
-    options:{label:"Choose your side", values:["2 chapatis","Fried cassava","Fries"]}}
+    options:{label:"Choose your sides (pick one or more)", values:["2 chapatis","Fried cassava","Fries"]}}
 ];
 var DELIVERY_FEE = 4.99;
 var cart = [];
@@ -455,7 +462,7 @@ function openItem(m){
   if(m.options){
     fs.hidden=false;
     fs.innerHTML='<legend>'+esc(m.options.label)+'</legend>'+m.options.values.map(function(v,i){
-      return '<label class="opt"><input type="radio" name="side" value="'+esc(v)+'"'+(i===0?' checked':'')+'> '+esc(v)+'</label>';
+      return '<label class="opt"><input type="checkbox" name="side" value="'+esc(v)+'"'+(i===0?' checked':'')+'> '+esc(v)+'</label>';
     }).join("");
   } else { fs.hidden=true; fs.innerHTML=""; }
   DIALS["iqty"]=undefined; DIALS["iprice"]=undefined;
@@ -472,7 +479,11 @@ $("iPlus").onclick=function(){ if(curQty<50){curQty++;refreshItem();} };
 $("itemX").onclick=function(){$("itemDlg").close();};
 $("iAdd").onclick=function(){
   var opt="";
-  if(cur.options){ var r=document.querySelector('input[name="side"]:checked'); opt=r?r.value:cur.options.values[0]; }
+  if(cur.options){
+    var picked=Array.prototype.map.call(document.querySelectorAll('input[name="side"]:checked'),function(x){return x.value;});
+    if(!picked.length){ toast("Choose at least one side"); return; }
+    opt=cur.options.values.filter(function(v){return picked.indexOf(v)>-1;}).join(", ");
+  }
   var note=$("iNote").value.trim();
   var ex=cart.filter(function(l){return l.id===cur.id&&l.opt===opt&&l.note===note;})[0];
   if(ex) ex.qty+=curQty; else cart.push({id:cur.id,opt:opt,note:note,qty:curQty});
@@ -903,6 +914,26 @@ function prefill(){
 
 $("coX").onclick=function(){$("coDlg").close();};
 
+// Remembers what was ordered so the thank-you screen can show it after Stripe sends the customer back.
+function saveLast(d){
+  try{ localStorage.setItem("snssg-last",JSON.stringify({mode:d.mode,addr:d.addr,when:d.when,
+    total:total()+(d.mode==="Delivery"?DELIVERY_FEE:0),
+    items:cart.map(function(l){ var m=find(l.id); return {n:m.name,q:l.qty,o:l.opt||"",note:l.note||"",p:m.price}; })})); }catch(e){}
+}
+function lastHTML(){
+  var o=null;
+  try{ o=JSON.parse(localStorage.getItem("snssg-last")||"null"); localStorage.removeItem("snssg-last"); }catch(e){}
+  if(!o||!Array.isArray(o.items)||!o.items.length) return "";
+  var li=o.items.map(function(i){
+    var sub=[i.o,i.note?"Note: "+i.note:""].filter(Boolean).join(" - ");
+    return '<li><div>'+(+i.q||1)+' &times; '+esc(i.n)+(sub?'<div class="sub">'+esc(sub)+'</div>':'')+'</div><div>'+money((+i.p||0)*(+i.q||1))+'</div></li>';
+  }).join("");
+  if(o.mode==="Delivery") li+='<li><div>Delivery fee</div><div>'+money(DELIVERY_FEE)+'</div></li>';
+  return '<div class="paidbanner">Payment received. Here is what you ordered:</div><div class="sumbox"><ul>'+li+'</ul>'+
+    '<div class="tot"><span>Total paid</span><span>'+money(+o.total||0)+'</span></div>'+
+    '<div class="sub" style="margin-top:8px">'+esc(o.mode||"Pickup")+(o.mode==="Delivery"&&o.addr?': '+esc(o.addr):'')+(o.when&&o.when!=="ASAP"?' &middot; '+esc(o.when):'')+'</div></div>';
+}
+
 var busy=false;
 function pay(){
   if(busy) return;
@@ -933,7 +964,7 @@ function pay(){
   })
     .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,j:j}; }); })
     .then(function(x){
-      if(x.ok && x.j.url){ window.location.href=x.j.url; return; }
+      if(x.ok && x.j.url){ saveLast(d); window.location.href=x.j.url; return; }
       var er=new Error((x.j && x.j.error) || "We could not start checkout. Please try again."); er.auth=(x.st===401); throw er;
     })
     .catch(function(e){
@@ -949,7 +980,7 @@ render();
   var p=new URLSearchParams(location.search);
   if(p.get("paid")==="1"){
     cart=[]; save(); render();
-    $("coBody").innerHTML='<h2 id="coH">Thank you!</h2><p>Your payment went through and Brenda has been notified. She will contact you about your order.</p>'+(SES?'<p>You can see this order any time under Account.</p>':'')+'<button class="btn" type="button" id="okBtn">Done</button>';
+    $("coBody").innerHTML='<h2 id="coH">Thank you!</h2><p>Your payment went through and Brenda has been notified. She will contact you about your order.</p>'+lastHTML()+(SES?'<p>You can see this order any time under Account.</p>':'')+'<button class="btn" type="button" id="okBtn">Done</button>';
     $("okBtn").onclick=function(){ $("coDlg").close(); };
     $("coDlg").showModal(); setTimeout(confetti,450);
     try{ history.replaceState(null,"",location.pathname); }catch(e){}
