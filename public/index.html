@@ -166,6 +166,30 @@ dialog[open]::backdrop{animation:fade .25s ease}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);transform:translate(-50%,0);z-index:60;background:var(--green);color:var(--green-ink);border:2px solid var(--saffron);border-radius:999px;padding:10px 18px;font-weight:700;font-size:.95rem;box-shadow:0 8px 24px rgba(0,0,0,.3);display:none;max-width:calc(100vw - 32px);text-align:center}
 #toast.show{display:block;animation:toastIn .3s ease}
 @media (min-width:901px){#toast{bottom:32px}}
+.collapse{display:grid;grid-template-rows:0fr;opacity:0;visibility:hidden;margin-top:-14px;transition:grid-template-rows .4s cubic-bezier(.2,.8,.2,1),opacity .25s ease,margin-top .4s cubic-bezier(.2,.8,.2,1),visibility 0s .4s}
+.collapse>div{overflow:hidden;min-height:0;padding:3px;margin:-3px}
+.collapse.open{grid-template-rows:1fr;opacity:1;visibility:visible;margin-top:0;transition:grid-template-rows .4s cubic-bezier(.2,.8,.2,1),opacity .3s .06s ease,margin-top .4s cubic-bezier(.2,.8,.2,1),visibility 0s}
+.fw{display:grid;gap:6px;font-weight:500}
+.sched-in{display:grid;gap:12px}
+.cal{border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:8px}
+.cal-h{display:flex;align-items:center;justify-content:space-between}
+.cal-h strong{font-family:"Bricolage Grotesque","DM Sans",system-ui,sans-serif;font-size:1.05rem}
+.cal-h button{width:38px;height:38px;border:1px solid var(--line);border-radius:50%;background:var(--bg);cursor:pointer;font-size:1.2rem;line-height:1}
+.cal-h button:disabled{opacity:.35;cursor:not-allowed}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal-g.fwd{animation:calFwd .3s ease}
+.cal-g.back{animation:calBack .3s ease}
+@keyframes calFwd{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+@keyframes calBack{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}
+.cal-g .dow{font-size:.75rem;color:var(--muted);font-weight:700;padding:4px 0}
+.cal-g button{aspect-ratio:1;border:0;border-radius:10px;background:none;cursor:pointer;font-weight:500;transition:background-color .15s ease,transform .15s ease}
+.cal-g button:hover:not(:disabled){background:var(--surface)}
+.cal-g button:active:not(:disabled){transform:scale(.92)}
+.cal-g button.today{box-shadow:inset 0 0 0 2px var(--line)}
+.cal-g button.sel{background:var(--btn);color:var(--btn-text);font-weight:700}
+.cal-g button:disabled{opacity:.3;cursor:not-allowed}
+.calsum{margin:0;color:var(--muted);font-size:.92rem;min-height:1.2em}
+
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .dv{display:inline-block;position:relative}
 .dial{display:inline-flex;align-items:baseline;line-height:var(--h,1.2em);font-variant-numeric:tabular-nums}
@@ -260,7 +284,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
   <button class="btn" id="mbarBtn" type="button">View order (<span class="dv" id="mbN">0</span>) <span class="dv" id="mbT">$0.00</span></button>
 </div>
 
-<footer class="foot"><div>test1. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 6</small></div></footer>
+<footer class="foot"><div>test1. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 7</small></div></footer>
 <dialog id="confirmDlg" aria-labelledby="cfH">
   <div class="dlg-body">
     <h2 id="cfH">Are you sure?</h2>
@@ -583,23 +607,76 @@ $("cartTop").onclick=openCart; $("mbarBtn").onclick=openCart;
 $("cartX").onclick=function(){$("cartDlg").close();};
 
 // ---- Checkout
+// ---- Calendar for scheduled orders
+var cal={y:0,m:0,sel:"",today:null};
+function pad2(n){ return (n<10?"0":"")+n; }
+function ymd(y,m,d){ return y+"-"+pad2(m+1)+"-"+pad2(d); }
+function parseYmd(s){ var a=s.split("-"); return new Date(+a[0],+a[1]-1,+a[2]); }
+function fmtDay(dt,long){ return new Intl.DateTimeFormat("en-US",long?{weekday:"long",month:"long",day:"numeric",year:"numeric"}:{weekday:"short",month:"short",day:"numeric",year:"numeric"}).format(dt); }
+function fmtTime(t){ var a=t.split(":"), h=+a[0], m=a[1]; var ap=h>=12?"PM":"AM"; h=h%12; if(h===0) h=12; return h+":"+m+" "+ap; }
+function calInit(){
+  var n=new Date();
+  cal.today=new Date(n.getFullYear(),n.getMonth(),n.getDate());
+  cal.y=n.getFullYear(); cal.m=n.getMonth(); cal.sel="";
+  renderCal(0);
+  $("cal").addEventListener("click",function(e){
+    var b=e.target.closest("button"); if(!b||b.disabled) return;
+    if(b.id==="calPrev"||b.id==="calNext"){
+      var dir=b.id==="calNext"?1:-1;
+      cal.m+=dir; if(cal.m<0){ cal.m=11; cal.y--; } if(cal.m>11){ cal.m=0; cal.y++; }
+      renderCal(dir);
+    } else if(b.getAttribute("data-d")){
+      cal.sel=b.getAttribute("data-d");
+      Array.prototype.forEach.call($("cal").querySelectorAll(".cal-g button"),function(x){ x.classList.toggle("sel",x===b); });
+      $("calSum").textContent=fmtDay(parseYmd(cal.sel),true);
+    }
+  });
+}
+function renderCal(dir){
+  var first=new Date(cal.y,cal.m,1), dim=new Date(cal.y,cal.m+1,0).getDate();
+  var label=new Intl.DateTimeFormat("en-US",{month:"long",year:"numeric"}).format(first);
+  var minM=cal.today.getFullYear()*12+cal.today.getMonth(), curM=cal.y*12+cal.m;
+  var h='<div class="cal-h"><button type="button" id="calPrev" aria-label="Previous month"'+(curM<=minM?" disabled":"")+'>&lsaquo;</button><strong>'+label+'</strong><button type="button" id="calNext" aria-label="Next month"'+(curM>=minM+3?" disabled":"")+'>&rsaquo;</button></div>';
+  h+='<div class="cal-g'+(dir>0?" fwd":dir<0?" back":"")+'">';
+  ["Su","Mo","Tu","We","Th","Fr","Sa"].forEach(function(d){ h+='<span class="dow">'+d+'</span>'; });
+  for(var i=0;i<first.getDay();i++) h+='<span></span>';
+  for(var d=1;d<=dim;d++){
+    var dt=new Date(cal.y,cal.m,d), id=ymd(cal.y,cal.m,d);
+    var cls=(id===cal.sel?"sel ":"")+(dt.getTime()===cal.today.getTime()?"today":"");
+    h+='<button type="button" data-d="'+id+'" class="'+cls+'"'+(dt<cal.today?" disabled":"")+' aria-label="'+fmtDay(dt,true)+'">'+d+'</button>';
+  }
+  h+='</div>';
+  $("cal").innerHTML=h;
+}
 function openCheckout(){
   $("coBody").innerHTML=
    '<h2 id="coH">Your details</h2>'+
    '<label class="f">Name<input type="text" id="cName" autocomplete="name"></label>'+
    '<label class="f">Phone<input type="tel" id="cPhone" autocomplete="tel"></label>'+
    '<div class="seg" role="radiogroup" aria-label="Pickup or delivery"><label><input type="radio" name="mode" value="Pickup" checked> Pickup</label><label><input type="radio" name="mode" value="Delivery"> Delivery</label></div>'+
-   '<label class="f" id="addrWrap" hidden>Delivery address<input type="text" id="cAddr" autocomplete="street-address"></label>'+
-   '<label class="f">When do you want it? (optional)<input type="text" id="cWhen" placeholder="For example: Saturday 5 pm"></label>'+
+   '<div class="collapse" id="addrWrap" inert><div><label class="f">Delivery address<input type="text" id="cAddr" autocomplete="street-address"></label></div></div>'+
+   '<div class="fw"><span id="whenLbl">When do you want it?</span><div class="seg" role="radiogroup" aria-labelledby="whenLbl"><label><input type="radio" name="when" value="ASAP" checked> ASAP</label><label><input type="radio" name="when" value="Schedule"> Schedule</label></div></div>'+
+   '<div class="collapse" id="schedWrap" inert><div class="sched-in"><div class="cal" id="cal"></div><label class="f">Time<input type="time" id="cTime" step="900"></label><p class="calsum" id="calSum" aria-live="polite"></p></div></div>'+
    '<label class="f">Notes for Brenda (optional)<textarea id="cNote"></textarea></label>'+
    '<div class="row"><span>Subtotal</span><span class="dv" data-k="sub" data-t="'+money(total())+'"></span></div>'+
-   '<div class="row" id="feeRow" hidden><span>Delivery fee</span><span class="dv" id="coFee" data-k="fee" data-t="'+money(DELIVERY_FEE)+'"></span></div>'+
+   '<div class="collapse" id="feeRow" inert><div><div class="row"><span>Delivery fee</span><span class="dv" id="coFee" data-k="fee" data-t="'+money(DELIVERY_FEE)+'"></span></div></div></div>'+
    '<div class="row"><strong>Total</strong><strong id="coTotal" class="dv" data-k="total" data-t="'+money(total())+'"></strong></div>'+
    '<p class="err" id="cErr" role="alert"></p>'+
    '<button class="btn" type="button" id="cGo">Pay with Apple Pay or card</button>'+
    '<p class="fine" style="padding:0">You pay on Stripe\'s secure page. Apple Pay and cards are accepted. Brenda is texted as soon as you pay.</p>';
   var radios=document.querySelectorAll('input[name="mode"]');
-  Array.prototype.forEach.call(radios,function(r){ r.onchange=function(){ var del=(document.querySelector('input[name="mode"]:checked').value==="Delivery"); $("addrWrap").hidden=!del; $("feeRow").hidden=!del; if(del){ DIALS["cofee"]=money(DELIVERY_FEE).replace(/\d/g,"0"); dialSet($("coFee"),money(DELIVERY_FEE),"cofee"); } dialSet($("coTotal"),money(total()+(del?DELIVERY_FEE:0)),"cototal"); if(del) $("cAddr").focus(); }; });
+  Array.prototype.forEach.call(radios,function(r){ r.onchange=function(){
+    var del=(document.querySelector('input[name="mode"]:checked').value==="Delivery");
+    $("addrWrap").classList.toggle("open",del); $("addrWrap").inert=!del;
+    $("feeRow").classList.toggle("open",del); $("feeRow").inert=!del;
+    if(del){ DIALS["cofee"]=money(DELIVERY_FEE).replace(/\d/g,"0"); dialSet($("coFee"),money(DELIVERY_FEE),"cofee"); setTimeout(function(){ if($("cAddr")) $("cAddr").focus(); },420); }
+    dialSet($("coTotal"),money(total()+(del?DELIVERY_FEE:0)),"cototal");
+  }; });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="when"]'),function(r){ r.onchange=function(){
+    var sc=(document.querySelector('input[name="when"]:checked').value==="Schedule");
+    $("schedWrap").classList.toggle("open",sc); $("schedWrap").inert=!sc;
+  }; });
+  calInit();
   $("cGo").onclick=pay;
   $("coDlg").showModal();
   initDials($("coBody"),"co","zero");
@@ -612,11 +689,20 @@ function pay(){
   var d={
     name:$("cName").value.trim(), phone:$("cPhone").value.trim(),
     mode:document.querySelector('input[name="mode"]:checked').value,
-    addr:$("cAddr").value.trim(), when:$("cWhen").value.trim(), note:$("cNote").value.trim()
+    addr:$("cAddr").value.trim(), when:"ASAP", note:$("cNote").value.trim()
   };
   if(!d.name){ $("cErr").textContent="Enter your name."; $("cName").focus(); return; }
   if(d.phone.replace(/\D/g,"").length<7){ $("cErr").textContent="Enter a phone number Brenda can reach."; $("cPhone").focus(); return; }
   if(d.mode==="Delivery" && !d.addr){ $("cErr").textContent="Enter your delivery address."; $("cAddr").focus(); return; }
+  if(document.querySelector('input[name="when"]:checked').value==="Schedule"){
+    var tv=$("cTime").value;
+    if(!cal.sel){ $("cErr").textContent="Pick a date on the calendar."; return; }
+    if(!tv){ $("cErr").textContent="Pick a time."; $("cTime").focus(); return; }
+    var sd=parseYmd(cal.sel), tp=tv.split(":");
+    sd.setHours(+tp[0],+tp[1],0,0);
+    if(sd<new Date()){ $("cErr").textContent="That time has already passed. Pick a later time."; return; }
+    d.when=fmtDay(parseYmd(cal.sel),false)+" at "+fmtTime(tv);
+  }
   busy=true; $("cGo").disabled=true; $("cGo").classList.add("loading"); $("cGo").textContent="Opening secure checkout..."; $("cErr").textContent="";
   var payload={items:cart.map(function(l){return {id:l.id,qty:l.qty,opt:l.opt,note:l.note};}),customer:d};
   fetch("/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
