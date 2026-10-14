@@ -130,7 +130,47 @@ textarea{min-height:76px;resize:vertical}
   .mbar[hidden]{display:none}
   body{padding-bottom:84px}
 }
-@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+
+/* ---- Motion ---- */
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes zoomIn{from{transform:scale(1.08)}to{transform:scale(1)}}
+@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes bump{0%{transform:scale(1)}35%{transform:scale(1.22)}70%{transform:scale(.95)}100%{transform:scale(1)}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,16px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+.hero h1{animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
+.hero p{animation:rise .7s .12s cubic-bezier(.2,.7,.2,1) both}
+.hero .tags{animation:rise .7s .24s cubic-bezier(.2,.7,.2,1) both}
+.hero-photo{animation:rise .8s .1s cubic-bezier(.2,.7,.2,1) both}
+.hero-photo img{animation:zoomIn 1.6s cubic-bezier(.2,.7,.2,1) both}
+.item{transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease,opacity .55s ease}
+.item .ph img{transition:transform .5s ease}
+.reveal{opacity:0;transform:translateY(20px)}
+.reveal.in{opacity:1;transform:none}
+.section h2.reveal{transition:opacity .5s ease,transform .5s ease}
+.item:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,.14)}
+.item:hover .ph img{transform:scale(1.08)}
+.item:active{transform:translateY(-1px) scale(.99)}
+.item .plus{transition:transform .2s ease}
+.item:hover .plus{transform:scale(1.12) rotate(90deg)}
+.btn,.cart-btn,.cats a,.qty button,.x{transition:transform .15s ease,filter .15s ease,background-color .2s ease}
+.btn:hover,.cart-btn:hover{filter:brightness(1.08)}
+.btn:active,.cart-btn:active,.cats a:active{transform:scale(.97)}
+.qty button:hover{background:var(--surface)}
+.x:hover{transform:rotate(90deg)}
+dialog[open]{animation:pop .26s cubic-bezier(.2,.8,.2,1)}
+dialog[open]::backdrop{animation:fade .25s ease}
+.bump{animation:bump .45s ease}
+.mbar:not([hidden]){animation:slideUp .3s ease}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);transform:translate(-50%,0);z-index:60;background:var(--green);color:var(--green-ink);border:2px solid var(--saffron);border-radius:999px;padding:10px 18px;font-weight:700;font-size:.95rem;box-shadow:0 8px 24px rgba(0,0,0,.3);display:none;max-width:calc(100vw - 32px);text-align:center}
+#toast.show{display:block;animation:toastIn .3s ease}
+@media (min-width:901px){#toast{bottom:32px}}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none !important;transition:none !important}
+  .reveal{opacity:1;transform:none}
+}
 </style>
 </head>
 <body>
@@ -188,6 +228,7 @@ textarea{min-height:76px;resize:vertical}
 </div>
 
 <footer class="foot"><div>test1. Pay securely online with Apple Pay or card.</div></footer>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <!-- Item dialog -->
 <dialog id="itemDlg" aria-labelledby="iName">
@@ -252,6 +293,22 @@ MENU.forEach(function(m){
   $("list-"+m.cat).appendChild(b);
 });
 
+// ---- Scroll reveal
+(function(){
+  if(!("IntersectionObserver" in window)) return;
+  if(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  var els=document.querySelectorAll(".section h2,.item");
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){
+        e.target.classList.add("in"); io.unobserve(e.target);
+        setTimeout(function(){ e.target.style.transitionDelay=""; },800);
+      }
+    });
+  },{threshold:.1,rootMargin:"0px 0px -5% 0px"});
+  Array.prototype.forEach.call(els,function(el,i){ el.classList.add("reveal"); el.style.transitionDelay=((i%2)*80)+"ms"; io.observe(el); });
+})();
+
 // ---- Item dialog
 var cur=null, curQty=1;
 function openItem(m){
@@ -282,7 +339,7 @@ $("iAdd").onclick=function(){
   var note=$("iNote").value.trim();
   var ex=cart.filter(function(l){return l.id===cur.id&&l.opt===opt&&l.note===note;})[0];
   if(ex) ex.qty+=curQty; else cart.push({id:cur.id,opt:opt,note:note,qty:curQty});
-  save(); render(); $("itemDlg").close();
+  save(); render(); $("itemDlg").close(); toast("Added to your order: "+cur.name);
 };
 
 // ---- Cart rendering
@@ -302,12 +359,18 @@ function cartHTML(){
     ''+
     '<button class="btn" type="button" data-a="checkout">Check out</button>';
 }
+var lastN=count();
+function bump(el){ if(!el) return; el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+var toastTimer=null;
+function toast(msg){ var t=$("toast"); t.textContent=msg; t.classList.remove("show"); void t.offsetWidth; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(function(){ t.classList.remove("show"); },2200); }
 function render(){
   var h=cartHTML();
   $("sideBody").innerHTML=h;
   $("cartDlgBody").innerHTML=h;
   var n=count();
   $("cartTopN").textContent=n;
+  if(n>lastN){ bump($("cartTopN")); bump($("mbarBtn")); }
+  lastN=n;
   $("mbar").hidden = n===0;
   $("mbarBtn").textContent="View order ("+n+")  "+money(total());
   save();
