@@ -85,7 +85,7 @@ img{max-width:100%;display:block}
 .line .pr{font-weight:700;text-align:right}
 .qty{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;margin-top:6px}
 .qty button{width:34px;height:34px;border:0;background:none;font-size:1.2rem;cursor:pointer;border-radius:50%}
-.qty span{min-width:26px;text-align:center;font-weight:700}
+.qty>span{min-width:26px;text-align:center;font-weight:700}
 .tot{border-top:1px solid var(--line);padding:14px 16px;display:flex;justify-content:space-between;font-weight:700;font-size:1.05rem}
 .fine{padding:0 16px 12px;color:var(--muted);font-size:.82rem}
 .btn{display:block;width:100%;border:0;border-radius:10px;background:var(--btn);color:var(--btn-text);font-weight:700;padding:13px 16px;cursor:pointer;text-align:center;text-decoration:none}
@@ -167,7 +167,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
 #toast.show{display:block;animation:toastIn .3s ease}
 @media (min-width:901px){#toast{bottom:32px}}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.dv{display:inline-block;position:relative}
+.dv{display:inline-block;position:relative;vertical-align:-.22em}
 .dial{display:inline-flex;align-items:flex-start;line-height:1.15em;font-variant-numeric:tabular-nums}
 .dc{display:inline-block;height:1.15em;overflow:hidden;width:.64em;text-align:center}
 .strip{display:flex;flex-direction:column;transition:transform .95s cubic-bezier(.25,1.12,.4,1)}
@@ -189,7 +189,6 @@ dialog[open]::backdrop{animation:fade .25s ease}
 .topbar{transition:box-shadow .25s ease}
 .topbar.scrolled{box-shadow:0 6px 18px rgba(0,0,0,.28)}
 .cats a.active{background:var(--saffron);color:#1A1405}
-.tot span{display:inline-block}
 .btn.loading::before{content:"";display:inline-block;width:14px;height:14px;margin-right:8px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px}
 .side .btn,#cGo,#iAdd{position:relative;overflow:hidden}
 .side .btn::after,#cGo::after,#iAdd::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:translateX(-120%);animation:shine 3.8s ease-in-out infinite;pointer-events:none}
@@ -259,7 +258,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
 </main>
 
 <div class="mbar" id="mbar" hidden>
-  <button class="btn" id="mbarBtn" type="button">View order</button>
+  <button class="btn" id="mbarBtn" type="button">View order (<span class="dv" id="mbN">0</span>) <span class="dv" id="mbT">$0.00</span></button>
 </div>
 
 <footer class="foot"><div>test1. Pay securely online with Apple Pay or card.</div></footer>
@@ -276,7 +275,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
       <textarea id="iNote" placeholder="For example: extra pepper, no onions"></textarea>
     </label>
     <div class="row">
-      <div class="qty" aria-label="Quantity"><button type="button" id="iMinus" aria-label="Fewer">&minus;</button><span id="iQty">1</span><button type="button" id="iPlus" aria-label="More">+</button></div>
+      <div class="qty" aria-label="Quantity"><button type="button" id="iMinus" aria-label="Fewer">&minus;</button><span class="dv" id="iQty">1</span><button type="button" id="iPlus" aria-label="More">+</button></div>
       <button class="btn" id="iAdd" type="button" style="width:auto;min-width:190px">Add to order</button>
     </div>
   </div>
@@ -322,7 +321,7 @@ function count(){return cart.reduce(function(s,l){return s+l.qty;},0);}
 MENU.forEach(function(m){
   var b=document.createElement("button");
   b.type="button"; b.className="item"; b.setAttribute("aria-label",m.name+", "+money(m.price)+". Add to order");
-  b.innerHTML='<div class="t"><h3>'+esc(m.name)+'</h3><p class="d">'+esc(m.desc)+'</p><div class="p">'+money(m.price)+(m.unit?' <span class="badge">'+m.unit+'</span>':'')+'</div></div>'+
+  b.innerHTML='<div class="t"><h3>'+esc(m.name)+'</h3><p class="d">'+esc(m.desc)+'</p><div class="p"><span class="dv" data-k="'+m.id+'" data-t="'+money(m.price)+'"></span>'+(m.unit?' <span class="badge">'+m.unit+'</span>':'')+'</div></div>'+
     '<div class="ph"><img src="'+IMGS[m.img]+'" alt="'+esc(m.name)+'" loading="lazy"><span class="plus" aria-hidden="true">+</span></div>';
   b.addEventListener("click",function(){openItem(m);});
   $("list-"+m.cat).appendChild(b);
@@ -337,6 +336,7 @@ MENU.forEach(function(m){
     es.forEach(function(e){
       if(e.isIntersecting){
         e.target.classList.add("in"); io.unobserve(e.target);
+        if(e.target.classList.contains("item")) rollPrice(e.target);
         setTimeout(function(){ e.target.style.transitionDelay=""; },800);
       }
     });
@@ -374,12 +374,14 @@ function openItem(m){
       return '<label class="opt"><input type="radio" name="side" value="'+esc(v)+'"'+(i===0?' checked':'')+'> '+esc(v)+'</label>';
     }).join("");
   } else { fs.hidden=true; fs.innerHTML=""; }
+  DIALS["iqty"]=undefined; DIALS["iprice"]=undefined;
   refreshItem();
   $("itemDlg").showModal();
 }
 function refreshItem(){
-  $("iQty").textContent=curQty;
-  $("iAdd").textContent="Add to order  "+money(cur.price*curQty);
+  dialSet($("iQty"),String(curQty),"iqty");
+  if(!$("iPrice")) $("iAdd").innerHTML='Add to order <span class="dv" id="iPrice"></span>';
+  dialSet($("iPrice"),money(cur.price*curQty),"iprice");
 }
 $("iMinus").onclick=function(){ if(curQty>1){curQty--;refreshItem();} };
 $("iPlus").onclick=function(){ if(curQty<50){curQty++;refreshItem();} };
@@ -401,8 +403,8 @@ function linesHTML(){
     return '<li class="line"><div><div class="nm">'+esc(m.name)+'</div>'+
       (l.opt?'<div class="sub">'+esc(l.opt)+'</div>':'')+
       (l.note?'<div class="sub">Note: '+esc(l.note)+'</div>':'')+
-      '<div class="qty"><button type="button" data-a="dec" data-i="'+i+'" aria-label="Remove one '+esc(m.name)+'">&minus;</button><span>'+l.qty+'</span><button type="button" data-a="inc" data-i="'+i+'" aria-label="Add one '+esc(m.name)+'">+</button></div></div>'+
-      '<div class="pr">'+money(m.price*l.qty)+'</div></li>';
+      '<div class="qty"><button type="button" data-a="dec" data-i="'+i+'" aria-label="Remove one '+esc(m.name)+'">&minus;</button><span class="dv" data-k="lq'+i+'" data-t="'+l.qty+'"></span><button type="button" data-a="inc" data-i="'+i+'" aria-label="Add one '+esc(m.name)+'">+</button></div></div>'+
+      '<div class="pr"><span class="dv" data-k="lp'+i+'" data-t="'+money(m.price*l.qty)+'"></span></div></li>';
   }).join("")+'</ul>';
 }
 function cartHTML(){
@@ -448,6 +450,12 @@ function dialSet(el,text,key,fresh){
     s.style.transform="translateY(-"+(+s.getAttribute("data-e")*1.15)+"em)";
   });
 }
+function rollPrice(item){
+  var el=item.querySelector(".dv"); if(!el) return;
+  var t=el.getAttribute("data-t"), key="card"+el.getAttribute("data-k");
+  DIALS[key]=t.replace(/\d/g,"0");
+  dialSet(el,t,key);
+}
 function initDials(root,prefix,fresh){
   Array.prototype.forEach.call(root.querySelectorAll(".dv"),function(el){ dialSet(el,el.getAttribute("data-t"),prefix+el.getAttribute("data-k"),fresh); });
 }
@@ -492,7 +500,7 @@ function render(){
   lastN=n;
 
   $("mbar").hidden = n===0;
-  $("mbarBtn").textContent="View order ("+n+")  "+money(total());
+  dialSet($("mbN"),String(n),"mbn"); dialSet($("mbT"),money(total()),"mbt");
   save();
 }
 function cartClick(e){
@@ -519,13 +527,13 @@ function openCheckout(){
    '<label class="f">When do you want it? (optional)<input type="text" id="cWhen" placeholder="For example: Saturday 5 pm"></label>'+
    '<label class="f">Notes for Brenda (optional)<textarea id="cNote"></textarea></label>'+
    '<div class="row"><span>Subtotal</span><span class="dv" data-k="sub" data-t="'+money(total())+'"></span></div>'+
-   '<div class="row" id="feeRow" hidden><span>Delivery fee</span><span>'+money(DELIVERY_FEE)+'</span></div>'+
+   '<div class="row" id="feeRow" hidden><span>Delivery fee</span><span class="dv" id="coFee" data-k="fee" data-t="'+money(DELIVERY_FEE)+'"></span></div>'+
    '<div class="row"><strong>Total</strong><strong id="coTotal" class="dv" data-k="total" data-t="'+money(total())+'"></strong></div>'+
    '<p class="err" id="cErr" role="alert"></p>'+
    '<button class="btn" type="button" id="cGo">Pay with Apple Pay or card</button>'+
    '<p class="fine" style="padding:0">You pay on Stripe\'s secure page. Apple Pay and cards are accepted. Brenda is texted as soon as you pay.</p>';
   var radios=document.querySelectorAll('input[name="mode"]');
-  Array.prototype.forEach.call(radios,function(r){ r.onchange=function(){ var del=(document.querySelector('input[name="mode"]:checked').value==="Delivery"); $("addrWrap").hidden=!del; $("feeRow").hidden=!del; dialSet($("coTotal"),money(total()+(del?DELIVERY_FEE:0)),"cototal"); if(del) $("cAddr").focus(); }; });
+  Array.prototype.forEach.call(radios,function(r){ r.onchange=function(){ var del=(document.querySelector('input[name="mode"]:checked').value==="Delivery"); $("addrWrap").hidden=!del; $("feeRow").hidden=!del; if(del){ DIALS["cofee"]=money(DELIVERY_FEE).replace(/\d/g,"0"); dialSet($("coFee"),money(DELIVERY_FEE),"cofee"); } dialSet($("coTotal"),money(total()+(del?DELIVERY_FEE:0)),"cototal"); if(del) $("cAddr").focus(); }; });
   initDials($("coBody"),"co",true);
   $("cGo").onclick=pay;
   $("coDlg").showModal();
@@ -557,6 +565,7 @@ function pay(){
     });
 }
 
+["list-soups","list-chapati","list-fish"].forEach(function(id){ initDials($(id),"card",true); });
 render();
 (function(){
   var p=new URLSearchParams(location.search);
