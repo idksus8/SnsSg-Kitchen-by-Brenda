@@ -8,6 +8,8 @@ Files
 - api/webhook.js : Stripe tells this a payment worked, and it texts you the order
 - api/_menu.js : the prices the server trusts
 - api/_text.js : the wording of the text you receive
+- api/config.js, api/orders.js, api/_supabase.js : accounts and order history (step 6)
+- supabase/schema.sql : the orders table, run once in Supabase (step 6)
 
 ## Setup (about an hour, plus waiting for text approval)
 
@@ -45,6 +47,22 @@ Files
 3. For real orders: switch Stripe to live mode, put the live secret key in Vercel, make a new webhook endpoint in live mode, update STRIPE_WEBHOOK_SECRET, and redeploy.
 
 While Twilio approval is pending, you can still turn on emails for successful payments in your Stripe settings so you do not miss orders.
+
+### 6. Accounts, guest checkout and order history (optional, Supabase)
+Customers can log in, create an account, or check out as a guest, and logged-in customers see their past orders under "Account". Skip this step and the site keeps working as guest-only checkout (no login buttons show).
+1. Make a free account at supabase.com and create a project.
+2. Open SQL Editor, paste everything from supabase/schema.sql, and run it.
+3. Under Authentication, in the Email sign-in settings, turn OFF "Confirm email" so customers can order right after signing up. If you leave it on, Supabase's built-in email sending is very limited, so you would need to set up your own email service.
+4. Under Authentication > URL Configuration, set the Site URL to your site address.
+5. Under Project Settings > API, copy the Project URL, the anon (or publishable) key, and the service_role (or secret) key. Add these in Vercel > Settings > Environment Variables, then redeploy:
+   - SUPABASE_URL
+   - SUPABASE_ANON_KEY
+   - SUPABASE_SERVICE_KEY : keep this one private. It is only used on the server.
+
+Good to know:
+- An order shows in someone's history only if they were logged in when they paid. Guest orders are not added later.
+- There is no "forgot password" button yet. You can send a reset email from Supabase > Authentication > Users.
+- Brenda's order text works the same for guests and account holders.
 
 ## Good to know
 - Changing a price or dish: edit it in BOTH api/_menu.js (the price customers are charged) and the MENU list near the bottom of public/index.html (what customers see).

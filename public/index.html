@@ -106,7 +106,7 @@ legend{font-weight:700;padding:0 6px}
 .opt{display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer}
 .opt input{width:20px;height:20px;accent-color:var(--green)}
 label.f{display:grid;gap:5px;font-weight:500}
-input[type=text],input[type=tel],textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:11px 12px}
+input[type=text],input[type=tel],input[type=email],input[type=password],textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:11px 12px}
 textarea{min-height:76px;resize:vertical}
 .row{display:flex;gap:12px;align-items:center;justify-content:space-between}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -223,6 +223,14 @@ dialog[open]::backdrop{animation:fade .25s ease}
   *,*::before,*::after{animation:none !important;transition:none !important}
   .reveal{opacity:1;transform:none}
 }
+.tb-r{display:flex;align-items:center;gap:8px}
+.acct-btn{background:transparent;color:var(--green-ink);border:1px solid rgba(255,255,255,.45);border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer}
+.acct-btn:hover{background:rgba(255,255,255,.12)}
+.lnk{background:none;border:0;padding:0;color:var(--text);text-decoration:underline;cursor:pointer;font-weight:700}
+.ords{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.ord{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:6px}
+.ord ul{margin:0;padding-left:18px}
+.ord .sub{color:var(--muted);font-size:.88rem}
 </style>
 </head>
 <body>
@@ -230,7 +238,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
 <header class="topbar">
   <div class="topbar-in">
     <div class="brand">test1</div>
-    <button class="cart-btn" id="cartTop" type="button" aria-label="Open your order">Your order <span class="n" id="cartTopN">0</span></button>
+    <div class="tb-r"><button class="acct-btn" id="acctBtn" type="button" hidden>Log in</button><button class="cart-btn" id="cartTop" type="button" aria-label="Open your order">Your order <span class="n" id="cartTopN">0</span></button></div>
   </div>
 </header>
 
@@ -322,6 +330,18 @@ dialog[open]::backdrop{animation:fade .25s ease}
 <dialog id="coDlg" aria-labelledby="coH">
   <button class="x" type="button" id="coX" aria-label="Close">&times;</button>
   <div class="dlg-body" id="coBody"></div>
+</dialog>
+
+<!-- Login / sign up dialog -->
+<dialog id="authDlg" aria-label="Log in or sign up">
+  <button class="x" type="button" id="authX" aria-label="Close">&times;</button>
+  <div class="dlg-body" id="authBody"></div>
+</dialog>
+
+<!-- Account / order history dialog -->
+<dialog id="acctDlg" aria-label="Your orders">
+  <button class="x" type="button" id="acctX" aria-label="Close">&times;</button>
+  <div class="dlg-body" id="acctBody"></div>
 </dialog>
 
 <script>
@@ -648,9 +668,9 @@ function renderCal(dir){
   h+='</div>';
   $("cal").innerHTML=h;
 }
-function openCheckout(){
+function openDetails(){
   $("coBody").innerHTML=
-   '<h2 id="coH">Your details</h2>'+
+   '<h2 id="coH">Your details</h2>'+whoHTML()+
    '<label class="f">Name<input type="text" id="cName" autocomplete="name"></label>'+
    '<label class="f">Phone<input type="tel" id="cPhone" autocomplete="tel"></label>'+
    '<div class="seg" role="radiogroup" aria-label="Pickup or delivery"><label><input type="radio" name="mode" value="Pickup" checked> Pickup</label><label><input type="radio" name="mode" value="Delivery"> Delivery</label></div>'+
@@ -678,9 +698,126 @@ function openCheckout(){
   }; });
   calInit();
   $("cGo").onclick=pay;
-  $("coDlg").showModal();
+  prefill();
+  if(!$("coDlg").open) $("coDlg").showModal();
   initDials($("coBody"),"co","zero");
 }
+// ---- Accounts (Supabase). Only active when /api/config says accounts are turned on.
+var ACCT=null, SES=null;
+try{ SES=JSON.parse(localStorage.getItem("snssg-auth")||"null"); }catch(e){}
+function setSes(s){ SES=s; try{ if(s) localStorage.setItem("snssg-auth",JSON.stringify(s)); else localStorage.removeItem("snssg-auth"); }catch(e){} drawAcct(); }
+function drawAcct(){ var b=$("acctBtn"); b.hidden=!ACCT; b.textContent=SES?"Account":"Log in"; }
+function sb(path,body,tok,method){
+  var h={"Content-Type":"application/json",apikey:ACCT.key};
+  tok=tok||(ACCT.key.indexOf("eyJ")===0?ACCT.key:"");
+  if(tok) h.Authorization="Bearer "+tok;
+  return fetch(ACCT.url+path,{method:method||"POST",headers:h,body:body?JSON.stringify(body):undefined}).then(function(r){
+    return r.json().catch(function(){return {};}).then(function(j){
+      if(!r.ok) throw new Error(j.msg||j.error_description||j.message||"Something went wrong. Please try again.");
+      return j;
+    });
+  });
+}
+function toSes(j){ return {access:j.access_token,refresh:j.refresh_token,exp:Date.now()+(j.expires_in||3600)*1000,user:j.user}; }
+// Gives back a fresh access token, or "" if the customer is not (or no longer) logged in.
+function token(){
+  if(!SES) return Promise.resolve("");
+  if(SES.exp-Date.now()>60000) return Promise.resolve(SES.access);
+  return sb("/auth/v1/token?grant_type=refresh_token",{refresh_token:SES.refresh}).then(function(j){ setSes(toSes(j)); return SES.access; }).catch(function(){ setSes(null); return ""; });
+}
+function logout(){ var t=SES&&SES.access; setSes(null); return t?sb("/auth/v1/logout",null,t).catch(function(){}):Promise.resolve(); }
+
+// Login / sign-up form. done() runs after a successful login. back (optional) shows a Back link.
+function authView(box,mode,done,back){
+  var su=mode==="signup";
+  box.innerHTML='<h2>'+(su?'Create your account':'Log in')+'</h2>'+
+    (su?'<label class="f">Name<input type="text" id="aName" autocomplete="name"></label><label class="f">Phone (optional)<input type="tel" id="aPhone" autocomplete="tel"></label>':'')+
+    '<label class="f">Email<input type="email" id="aEmail" autocomplete="email"></label>'+
+    '<label class="f">Password'+(su?' (at least 8 characters)':'')+'<input type="password" id="aPass" autocomplete="'+(su?'new':'current')+'-password"></label>'+
+    '<label class="opt"><input type="checkbox" id="aShow"> Show password</label>'+
+    '<p class="err" id="aErr" role="alert"></p>'+
+    '<button class="btn" type="button" id="aGo">'+(su?'Create account':'Log in')+'</button>'+
+    '<p class="fine" style="padding:0">'+(su?'Already have an account? <button class="lnk" type="button" id="aSw">Log in</button>':'New here? <button class="lnk" type="button" id="aSw">Create an account</button>')+(back?' &middot; <button class="lnk" type="button" id="aBack">Back</button>':'')+'</p>';
+  $("aShow").onchange=function(){ $("aPass").type=this.checked?"text":"password"; };
+  $("aSw").onclick=function(){ authView(box,su?"login":"signup",done,back); };
+  if(back) $("aBack").onclick=back;
+  $("aGo").onclick=function(){
+    var em=$("aEmail").value.trim(), pw=$("aPass").value, err=$("aErr"), go=$("aGo");
+    var nm=su?$("aName").value.trim():"", ph=su?$("aPhone").value.trim():"";
+    if(su&&!nm){ err.textContent="Enter your name."; return; }
+    if(!/^\S+@\S+\.\S+$/.test(em)){ err.textContent="Enter a valid email address."; return; }
+    if(su&&pw.length<8){ err.textContent="Your password needs at least 8 characters."; return; }
+    if(!su&&!pw){ err.textContent="Enter your password."; return; }
+    go.disabled=true; err.textContent="";
+    var p=su?sb("/auth/v1/signup",{email:em,password:pw,data:{name:nm,phone:ph}}):sb("/auth/v1/token?grant_type=password",{email:em,password:pw});
+    p.then(function(j){
+      if(j.access_token){ setSes(toSes(j)); done(); return; }
+      // Email confirmation is turned on in Supabase: no login until they click the link.
+      box.innerHTML='<h2>Check your email</h2><p>We sent you a link to confirm your account. After you confirm, come back and log in.</p><button class="btn" type="button" id="aOk">OK</button>';
+      $("aOk").onclick=back||function(){ $("authDlg").close(); };
+    }).catch(function(e){ go.disabled=false; err.textContent=e.message; });
+  };
+}
+
+function ordHTML(o){
+  var items=(o.items||[]).map(function(i){ return '<li>'+(+i.qty||1)+' &times; '+esc(i.label)+'</li>'; }).join("");
+  return '<li class="ord"><div class="row"><strong>'+esc(fmtDay(new Date(o.created_at),false))+'</strong><strong>'+money(o.total_cents/100)+'</strong></div>'+
+    '<div class="sub">Order #'+esc(String(o.id).slice(0,8).toUpperCase())+' &middot; '+esc(o.mode||"Pickup")+(o.mode==="Delivery"&&o.addr?': '+esc(o.addr):'')+(o.when_text&&o.when_text!=="ASAP"?' &middot; '+esc(o.when_text):'')+'</div>'+
+    '<ul>'+items+'</ul>'+(o.note?'<div class="sub">Note: '+esc(o.note)+'</div>':'')+'</li>';
+}
+// Header button: login dialog when logged out, order history when logged in.
+function openAcct(){
+  if(!SES){
+    authView($("authBody"),"login",function(){ $("authDlg").close(); toast("You are logged in"); });
+    $("authDlg").showModal(); return;
+  }
+  $("acctBody").innerHTML='<h2>Your orders</h2><p class="fine" style="padding:0">Signed in as <strong>'+esc(SES.user.email||"")+'</strong> &middot; <button class="lnk" type="button" id="aOut">Log out</button></p><div id="ordList"><p class="empty" style="padding:8px 0">Loading your orders...</p></div>';
+  $("aOut").onclick=function(){ logout().then(function(){ $("acctDlg").close(); toast("You are logged out"); }); };
+  $("acctDlg").showModal();
+  token().then(function(t){
+    if(!t){ var e=new Error("Please log in to see your orders."); e.auth=true; throw e; }
+    return fetch("/api/orders",{headers:{Authorization:"Bearer "+t}});
+  }).then(function(r){
+    return r.json().then(function(j){ if(!r.ok){ var e=new Error(j.error||"We could not load your orders."); e.auth=(r.status===401); throw e; } return j; });
+  }).then(function(j){
+    $("ordList").innerHTML=(j.orders&&j.orders.length)?'<ul class="ords">'+j.orders.map(ordHTML).join("")+'</ul>':'<p class="empty" style="padding:8px 0">No orders yet. Orders you place while logged in will show up here.</p>';
+  }).catch(function(e){
+    if(e&&e.auth){ setSes(null); $("acctDlg").close(); openAcct(); return; }
+    $("ordList").innerHTML='<p class="err">'+esc((e&&e.message)||"We could not load your orders.")+'</p>';
+  });
+}
+$("acctBtn").onclick=openAcct;
+$("authX").onclick=function(){ $("authDlg").close(); };
+$("acctX").onclick=function(){ $("acctDlg").close(); };
+
+// ---- Checkout entry: log in, create an account, or continue as a guest
+function openCheckout(){
+  if(!ACCT||SES){ openDetails(); return; }
+  coChoice();
+  if(!$("coDlg").open) $("coDlg").showModal();
+}
+function coChoice(msg){
+  $("coBody").innerHTML='<h2 id="coH">How would you like to check out?</h2>'+(msg?'<p class="err">'+esc(msg)+'</p>':'')+
+    '<button class="btn" type="button" id="chLogin">Log in</button>'+
+    '<button class="btn alt" type="button" id="chSign">Create an account</button>'+
+    '<button class="btn alt" type="button" id="chGuest">Continue as guest</button>'+
+    '<p class="fine" style="padding:0">An account saves your details and keeps your order history. Guests can still pay with Apple Pay or card.</p>';
+  var back=function(){ coChoice(); };
+  $("chLogin").onclick=function(){ authView($("coBody"),"login",openDetails,back); };
+  $("chSign").onclick=function(){ authView($("coBody"),"signup",openDetails,back); };
+  $("chGuest").onclick=openDetails;
+}
+function whoHTML(){
+  if(!ACCT) return "";
+  return SES?'<p class="fine" style="padding:0">Ordering as <strong>'+esc(SES.user.email||"")+'</strong> &middot; <button class="lnk" type="button" id="coOut">Log out</button></p>'
+            :'<p class="fine" style="padding:0">Checking out as a guest. <button class="lnk" type="button" id="coIn">Log in instead</button></p>';
+}
+function prefill(){
+  if(SES){ var md=SES.user.user_metadata||{}; $("cName").value=md.name||""; $("cPhone").value=md.phone||""; }
+  if($("coOut")) $("coOut").onclick=function(){ logout().then(function(){ coChoice(); }); };
+  if($("coIn")) $("coIn").onclick=function(){ authView($("coBody"),"login",openDetails,function(){ openDetails(); }); };
+}
+
 $("coX").onclick=function(){$("coDlg").close();};
 
 var busy=false;
@@ -705,13 +842,19 @@ function pay(){
   }
   busy=true; $("cGo").disabled=true; $("cGo").classList.add("loading"); $("cGo").textContent="Opening secure checkout..."; $("cErr").textContent="";
   var payload={items:cart.map(function(l){return {id:l.id,qty:l.qty,opt:l.opt,note:l.note};}),customer:d};
-  fetch("/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
-    .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
+  var wasIn=!!SES;
+  token().then(function(t){
+    if(wasIn&&!t){ var ex=new Error("Your login expired. Please log in again or continue as guest."); ex.auth=true; throw ex; }
+    var h={"Content-Type":"application/json"}; if(t) h.Authorization="Bearer "+t;
+    return fetch("/api/checkout",{method:"POST",headers:h,body:JSON.stringify(payload)});
+  })
+    .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,j:j}; }); })
     .then(function(x){
       if(x.ok && x.j.url){ window.location.href=x.j.url; return; }
-      throw new Error((x.j && x.j.error) || "We could not start checkout. Please try again.");
+      var er=new Error((x.j && x.j.error) || "We could not start checkout. Please try again."); er.auth=(x.st===401); throw er;
     })
     .catch(function(e){
+      if(e&&e.auth){ busy=false; setSes(null); coChoice(e.message); return; }
       busy=false; $("cGo").disabled=false; $("cGo").classList.remove("loading"); $("cGo").textContent="Pay with Apple Pay or card";
       $("cErr").textContent=(e && e.message) || "We could not start checkout. Please try again.";
     });
@@ -723,12 +866,16 @@ render();
   var p=new URLSearchParams(location.search);
   if(p.get("paid")==="1"){
     cart=[]; save(); render();
-    $("coBody").innerHTML='<h2 id="coH">Thank you!</h2><p>Your payment went through and Brenda has been notified. She will contact you about your order.</p><button class="btn" type="button" id="okBtn">Done</button>';
+    $("coBody").innerHTML='<h2 id="coH">Thank you!</h2><p>Your payment went through and Brenda has been notified. She will contact you about your order.</p>'+(SES?'<p>You can see this order any time under Account.</p>':'')+'<button class="btn" type="button" id="okBtn">Done</button>';
     $("okBtn").onclick=function(){ $("coDlg").close(); };
     $("coDlg").showModal(); setTimeout(confetti,450);
     try{ history.replaceState(null,"",location.pathname); }catch(e){}
   }
 })();
+fetch("/api/config").then(function(r){ return r.json(); }).then(function(c){
+  if(c&&c.enabled) ACCT={url:c.url,key:c.key};
+  drawAcct();
+}).catch(function(){});
 </script>
 </body>
 </html>
