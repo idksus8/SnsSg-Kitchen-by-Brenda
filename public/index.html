@@ -105,6 +105,15 @@ fieldset{border:1px solid var(--line);border-radius:12px;margin:0;padding:10px 1
 legend{font-weight:700;padding:0 6px}
 .opt{display:flex;align-items:center;gap:10px;padding:8px 4px;cursor:pointer}
 .opt input{width:20px;height:20px;accent-color:var(--green)}
+.opt input[type=checkbox]{-webkit-appearance:none;appearance:none;flex:none;display:grid;place-content:center;width:24px;height:24px;margin:0;border:2px solid var(--muted);border-radius:7px;background:var(--bg);cursor:pointer;transition:background-color .18s ease,border-color .18s ease,transform .18s ease}
+.opt input[type=checkbox]::before{content:"";width:13px;height:13px;background:var(--btn-text);clip-path:polygon(14% 44%,0 62%,40% 100%,100% 18%,84% 0,39% 62%);transform:scale(0) rotate(-40deg);transition:transform .25s cubic-bezier(.3,1.7,.5,1)}
+.opt input[type=checkbox]:checked{background:var(--btn);border-color:var(--btn);animation:cbPop .3s ease,cbRing .45s ease-out}
+.opt input[type=checkbox]:checked::before{transform:scale(1) rotate(0)}
+.opt:hover input[type=checkbox]:not(:checked){border-color:var(--btn)}
+.opt input[type=checkbox]:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+@keyframes cbPop{0%{transform:scale(1)}40%{transform:scale(.82)}100%{transform:scale(1)}}
+@keyframes cbRing{0%{box-shadow:0 0 0 0 rgba(240,169,31,.6)}100%{box-shadow:0 0 0 11px rgba(240,169,31,0)}}
+@media (prefers-reduced-motion: reduce){.opt input[type=checkbox],.opt input[type=checkbox]::before{transition:none}.opt input[type=checkbox]:checked{animation:none}}
 label.f{display:grid;gap:5px;font-weight:500}
 input[type=text],input[type=tel],input[type=email],input[type=password],textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:11px 12px}
 textarea{min-height:76px;resize:vertical}
