@@ -30,7 +30,7 @@
   --bg:#121614; --surface:#1B211E; --text:#F1F4F1; --muted:#A3ADA7; --line:#2C3530;
   --btn:#F4B740; --btn-text:#1A1405; --focus:#7DB4F5; color-scheme: dark;
 }
-html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 120px);scroll-behavior:smooth}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + var(--tb,56px) + var(--nv,48px) + 8px);scroll-behavior:smooth}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5}
 h1,h2,h3{font-family:"Bricolage Grotesque","DM Sans",system-ui,sans-serif;margin:0;line-height:1.15}
@@ -56,7 +56,7 @@ img{max-width:100%;display:block}
 .hero-photo img{width:100%;height:100%;object-fit:cover}
 
 .wrap{max-width:1120px;margin:0 auto;padding:0 20px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:32px;align-items:start}
-.cats{position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px);z-index:15;background:var(--bg);border-bottom:1px solid var(--line)}
+.cats{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--tb,56px));z-index:15;background:var(--bg);border-bottom:1px solid var(--line)}
 .cats-in{max-width:1120px;margin:0 auto;padding:10px 20px;display:flex;gap:8px;overflow-x:auto}
 .cats a{white-space:nowrap;text-decoration:none;color:var(--text);padding:7px 14px;border-radius:999px;background:var(--surface);font-weight:500;font-size:.95rem}
 .cats a:hover{background:var(--saffron);color:#1A1405}
@@ -75,7 +75,7 @@ img{max-width:100%;display:block}
 .item .plus{position:absolute;right:6px;bottom:6px;width:32px;height:32px;border-radius:50%;background:var(--btn);color:var(--btn-text);display:grid;place-items:center;font-size:1.3rem;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.35)}
 .badge{display:inline-block;font-size:.78rem;font-weight:700;color:var(--chili);}
 
-.side{position:sticky;top:calc(env(safe-area-inset-top,0px) + 120px);margin-top:28px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--bg)}
+.side{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--tb,56px) + var(--nv,48px) + 16px);margin-top:28px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--bg)}
 .side h2{font-size:1.2rem;padding:14px 16px;background:var(--surface)}
 .empty{padding:22px 16px;color:var(--muted)}
 .lines{list-style:none;margin:0;padding:0;max-height:48vh;overflow:auto}
@@ -162,15 +162,15 @@ textarea{min-height:76px;resize:vertical}
 dialog[open]{animation:pop .26s cubic-bezier(.2,.8,.2,1)}
 dialog[open]::backdrop{animation:fade .25s ease}
 .bump{animation:bump .45s ease}
-.mbar:not([hidden]){animation:slideUp .3s ease}
+.mbar.enter{animation:slideUp .3s ease}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);transform:translate(-50%,0);z-index:60;background:var(--green);color:var(--green-ink);border:2px solid var(--saffron);border-radius:999px;padding:10px 18px;font-weight:700;font-size:.95rem;box-shadow:0 8px 24px rgba(0,0,0,.3);display:none;max-width:calc(100vw - 32px);text-align:center}
 #toast.show{display:block;animation:toastIn .3s ease}
 @media (min-width:901px){#toast{bottom:32px}}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .dv{display:inline-block;position:relative}
 .dial{display:inline-flex;align-items:baseline;line-height:var(--h,1.2em);font-variant-numeric:tabular-nums}
-.dc{display:inline-block;height:var(--h,1.2em);width:var(--w,.62em);overflow:hidden;overflow:clip;text-align:center}
-.strip{display:flex;flex-direction:column;transition:transform .95s cubic-bezier(.25,1.12,.4,1)}
+.dc{display:inline-block;height:var(--h,1.2em);width:var(--w,.7em);overflow:hidden;overflow:clip;text-align:center}
+.strip{display:flex;flex-direction:column;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
 .strip i{display:block;height:var(--h,1.2em);line-height:var(--h,1.2em);font-style:normal}
 .dp{display:inline-block;height:var(--h,1.2em);line-height:var(--h,1.2em)}
 
@@ -261,6 +261,14 @@ dialog[open]::backdrop{animation:fade .25s ease}
 </div>
 
 <footer class="foot"><div>test1. Pay securely online with Apple Pay or card.</div></footer>
+<dialog id="confirmDlg" aria-labelledby="cfH">
+  <div class="dlg-body">
+    <h2 id="cfH">Are you sure?</h2>
+    <p id="cfMsg"></p>
+    <div class="row"><button class="btn alt" id="cfNo" type="button">Keep it</button><button class="btn" id="cfYes" type="button">Yes, remove</button></div>
+  </div>
+</dialog>
+
 <div id="toast" role="status" aria-live="polite"></div>
 
 <!-- Item dialog -->
@@ -359,6 +367,17 @@ MENU.forEach(function(m){
   upd();
 })();
 
+// ---- Keep sticky bars in step with the real header height; rebuild numbers after resize or font load
+(function(){
+  var root=document.documentElement, tb=document.querySelector(".topbar"), nv=document.querySelector(".cats"), t=null;
+  function setVars(){ root.style.setProperty("--tb",tb.offsetHeight+"px"); root.style.setProperty("--nv",nv.offsetHeight+"px"); }
+  setVars();
+  if("ResizeObserver" in window){ var ro=new ResizeObserver(setVars); ro.observe(tb); ro.observe(nv); }
+  window.addEventListener("resize",function(){ setVars(); clearTimeout(t); t=setTimeout(function(){ refreshDials(document); },200); });
+  window.addEventListener("load",setVars);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(function(){ setVars(); refreshDials(document); });
+})();
+
 // ---- Item dialog
 var cur=null, curQty=1;
 function openItem(m){
@@ -374,8 +393,8 @@ function openItem(m){
     }).join("");
   } else { fs.hidden=true; fs.innerHTML=""; }
   DIALS["iqty"]=undefined; DIALS["iprice"]=undefined;
-  refreshItem();
   $("itemDlg").showModal();
+  refreshItem();
 }
 function refreshItem(){
   dialSet($("iQty"),String(curQty),"iqty",false,true);
@@ -413,21 +432,35 @@ function cartHTML(){
     '<button class="btn" type="button" data-a="checkout">Check out</button>';
 }
 var lastN=count();
-var DIALS={};
-var DIGITS=(function(){ var s=""; for(var k=0;k<20;k++){ s+="<i>"+(k%10)+"</i>"; } return s; })();
+var DIALS={}, WCACHE={};
 function zeros(s){ return String(s).replace(/\d/g,"0"); }
-// Rolling number, like a multi-dial combination lock. Each digit scrolls to its new value.
-// fresh: show the number with no animation. zeroStart: if there is no earlier value, roll up from zeros.
+function numVal(s){ return parseFloat(String(s).replace(/[^0-9.]/g,""))||0; }
+// Width of the widest digit in the element's real font, so digits never overlap.
+function digitWidth(el,fs){
+  var cs=getComputedStyle(el), k=cs.fontSize+"|"+cs.fontWeight+"|"+cs.fontFamily;
+  if(WCACHE[k]) return WCACHE[k];
+  var pr=document.createElement("span");
+  pr.style.cssText="position:absolute;visibility:hidden;white-space:nowrap;font:inherit;font-variant-numeric:tabular-nums";
+  el.appendChild(pr);
+  var m=0;
+  for(var d=0;d<10;d++){ pr.textContent=String(d); var w=pr.getBoundingClientRect().width; if(w>m) m=w; }
+  el.removeChild(pr);
+  if(m<=0) return Math.round(fs*0.7);
+  var res=Math.ceil(m)+1;
+  if(!document.fonts||document.fonts.status==="loaded") WCACHE[k]=res;
+  return res;
+}
+// Rolling number. Each changed digit slides straight from the old digit to the new one.
+// fresh: show with no animation. zeroStart: with no earlier value, roll up from zeros.
 function dialSet(el,text,key,fresh,zeroStart){
   if(!el) return;
-  var a=String(text);
-  var prev=a;
+  var a=String(text), prev=a;
   if(!fresh){ if(DIALS[key]!==undefined) prev=String(DIALS[key]); else if(zeroStart) prev=zeros(a); }
-  DIALS[key]=a;
-  // Whole-pixel cell sizes keep every digit on exactly the same line.
+  DIALS[key]=a; el._dt=a; el._dk=key;
   var fs=parseFloat(getComputedStyle(el).fontSize)||16;
-  var h=Math.round(fs*1.2), w=Math.round(fs*0.62);
+  var h=Math.round(fs*1.2), w=digitWidth(el,fs);
   el.style.setProperty("--h",h+"px"); el.style.setProperty("--w",w+"px");
+  var dir=numVal(a)>=numVal(prev)?1:-1;
   var pad=a.length-prev.length;
   var html='<span class="sr">'+esc(a)+'</span><span class="dial" aria-hidden="true">';
   for(var i=0;i<a.length;i++){
@@ -435,25 +468,34 @@ function dialSet(el,text,key,fresh,zeroStart){
     if(/\d/.test(ch)){
       var pj=i-pad, pc=(pj>=0&&pj<prev.length)?prev.charAt(pj):"0";
       var from=/\d/.test(pc)?+pc:0, to=+ch;
-      var spin=(from!==to)?1:0;
-      html+='<span class="dc"><span class="strip" data-f="'+from+'" data-e="'+(to+10)+'" data-s="'+spin+'">'+DIGITS+'</span></span>';
+      if(from===to){
+        html+='<span class="dc"><span class="strip" data-s="0"><i>'+to+'</i></span></span>';
+      } else {
+        html+='<span class="dc"><span class="strip" data-s="1" data-d="'+dir+'">'+(dir>0?'<i>'+from+'</i><i>'+to+'</i>':'<i>'+to+'</i><i>'+from+'</i>')+'</span></span>';
+      }
     } else { html+='<span class="dp">'+esc(ch)+'</span>'; }
   }
   html+='</span>';
   el.innerHTML=html;
-  var strips=el.querySelectorAll(".strip");
-  var instant=reduceMotion();
+  var strips=el.querySelectorAll(".strip"), instant=reduceMotion();
   Array.prototype.forEach.call(strips,function(s){
-    var f=+s.getAttribute("data-f"), e=+s.getAttribute("data-e"), sp=s.getAttribute("data-s")==="1";
-    s.style.transform="translateY(-"+(((instant&&sp)?e:f)*h)+"px)";
+    var sp=s.getAttribute("data-s")==="1", d=+s.getAttribute("data-d");
+    var finalY=(sp&&d>0)?h:0;
+    var startY=sp?(d>0?0:h):0;
+    s.style.transform="translateY(-"+(instant?finalY:startY)+"px)";
   });
   if(instant) return;
   void el.offsetWidth;
   Array.prototype.forEach.call(strips,function(s,i){
     if(s.getAttribute("data-s")!=="1") return;
-    s.style.transitionDelay=(i*110)+"ms";
-    s.style.transform="translateY(-"+(+s.getAttribute("data-e")*h)+"px)";
+    var d=+s.getAttribute("data-d");
+    s.style.transitionDelay=(i*70)+"ms";
+    s.style.transform="translateY(-"+(d>0?h:0)+"px)";
   });
+}
+// Rebuild numbers without animation, for example after the font loads or the window is resized.
+function refreshDials(root){
+  Array.prototype.forEach.call((root||document).querySelectorAll(".dv"),function(el){ if(el._dt!==undefined) dialSet(el,el._dt,el._dk,true); });
 }
 function rollPrice(item){
   var el=item.querySelector(".dv"); if(!el) return;
@@ -507,22 +549,36 @@ function render(){
   var n=count();
   dialSet($("cartTopN"),String(n),"badge",false,true);
   if(n>lastN){ bump($("cartTopN")); bump($("mbarBtn")); }
+  if(n>0&&lastN===0){ var mb=$("mbar"); mb.classList.add("enter"); setTimeout(function(){ mb.classList.remove("enter"); },400); }
   lastN=n;
 
   $("mbar").hidden = n===0;
   dialSet($("mbN"),String(n),"mbn",false,true); dialSet($("mbT"),money(total()),"mbt",false,true);
   save();
 }
+var pendingRemove=null;
+function askRemove(line){
+  pendingRemove=line;
+  var m=find(line.id);
+  $("cfMsg").textContent="Remove "+m.name+(line.opt?" ("+line.opt+")":"")+" from your order?";
+  $("confirmDlg").showModal();
+}
+$("cfNo").onclick=function(){ pendingRemove=null; $("confirmDlg").close(); };
+$("cfYes").onclick=function(){
+  var idx=cart.indexOf(pendingRemove);
+  if(idx>-1){ cart.splice(idx,1); render(); }
+  pendingRemove=null; $("confirmDlg").close();
+};
 function cartClick(e){
   var t=e.target.closest("button[data-a]"); if(!t) return;
   var a=t.getAttribute("data-a"), i=+t.getAttribute("data-i");
   if(a==="inc"){cart[i].qty++;render();}
-  else if(a==="dec"){cart[i].qty--; if(cart[i].qty<=0) cart.splice(i,1); render();}
+  else if(a==="dec"){ if(cart[i].qty<=1){ askRemove(cart[i]); } else { cart[i].qty--; render(); } }
   else if(a==="checkout"){ if($("cartDlg").open) $("cartDlg").close(); openCheckout(); }
 }
 $("sideBody").addEventListener("click",cartClick);
 $("cartDlgBody").addEventListener("click",cartClick);
-function openCart(){ $("cartDlg").showModal(); }
+function openCart(){ $("cartDlg").showModal(); refreshDials($("cartDlg")); }
 $("cartTop").onclick=openCart; $("mbarBtn").onclick=openCart;
 $("cartX").onclick=function(){$("cartDlg").close();};
 
@@ -544,9 +600,9 @@ function openCheckout(){
    '<p class="fine" style="padding:0">You pay on Stripe\'s secure page. Apple Pay and cards are accepted. Brenda is texted as soon as you pay.</p>';
   var radios=document.querySelectorAll('input[name="mode"]');
   Array.prototype.forEach.call(radios,function(r){ r.onchange=function(){ var del=(document.querySelector('input[name="mode"]:checked').value==="Delivery"); $("addrWrap").hidden=!del; $("feeRow").hidden=!del; if(del){ DIALS["cofee"]=money(DELIVERY_FEE).replace(/\d/g,"0"); dialSet($("coFee"),money(DELIVERY_FEE),"cofee"); } dialSet($("coTotal"),money(total()+(del?DELIVERY_FEE:0)),"cototal"); if(del) $("cAddr").focus(); }; });
-  initDials($("coBody"),"co","zero");
   $("cGo").onclick=pay;
   $("coDlg").showModal();
+  initDials($("coBody"),"co","zero");
 }
 $("coX").onclick=function(){$("coDlg").close();};
 
