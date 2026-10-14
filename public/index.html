@@ -37,6 +37,7 @@ h1,h2,h3{font-family:"Bricolage Grotesque","DM Sans",system-ui,sans-serif;margin
 button,input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 img{max-width:100%;display:block}
+[hidden]{display:none !important}
 
 .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--green);color:var(--green-ink)}
 .topbar-in{max-width:1120px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -229,6 +230,7 @@ var MENU = [
   {id:"kisinia", cat:"fish", name:"Kisinia", price:30, img:5, desc:"Fried fish with tomato pepper sauce and shrimp, served with your choice of side.",
     options:{label:"Choose your side", values:["2 chapatis","Fried cassava","Fries"]}}
 ];
+var DELIVERY_FEE = 4.99;
 var cart = [];
 try { var saved = JSON.parse(localStorage.getItem("snssg-cart")||"[]"); if (Array.isArray(saved)) cart = saved.filter(function(l){return MENU.some(function(m){return m.id===l.id;});}); } catch(e){}
 
@@ -333,12 +335,14 @@ function openCheckout(){
    '<label class="f" id="addrWrap" hidden>Delivery address<input type="text" id="cAddr" autocomplete="street-address"></label>'+
    '<label class="f">When do you want it? (optional)<input type="text" id="cWhen" placeholder="For example: Saturday 5 pm"></label>'+
    '<label class="f">Notes for Brenda (optional)<textarea id="cNote"></textarea></label>'+
-   '<div class="row"><strong>Subtotal</strong><strong>'+money(total())+'</strong></div>'+
+   '<div class="row"><span>Subtotal</span><span>'+money(total())+'</span></div>'+
+   '<div class="row" id="feeRow" hidden><span>Delivery fee</span><span>'+money(DELIVERY_FEE)+'</span></div>'+
+   '<div class="row"><strong>Total</strong><strong id="coTotal">'+money(total())+'</strong></div>'+
    '<p class="err" id="cErr" role="alert"></p>'+
    '<button class="btn" type="button" id="cGo">Pay with Apple Pay or card</button>'+
    '<p class="fine" style="padding:0">You pay on Stripe\'s secure page. Apple Pay and cards are accepted. Brenda is texted as soon as you pay.</p>';
   var radios=document.querySelectorAll('input[name="mode"]');
-  Array.prototype.forEach.call(radios,function(r){ r.onchange=function(){ $("addrWrap").hidden = (document.querySelector('input[name="mode"]:checked').value!=="Delivery"); }; });
+  Array.prototype.forEach.call(radios,function(r){ r.onchange=function(){ var del=(document.querySelector('input[name="mode"]:checked').value==="Delivery"); $("addrWrap").hidden=!del; $("feeRow").hidden=!del; $("coTotal").textContent=money(total()+(del?DELIVERY_FEE:0)); if(del) $("cAddr").focus(); }; });
   $("cGo").onclick=pay;
   $("coDlg").showModal();
 }

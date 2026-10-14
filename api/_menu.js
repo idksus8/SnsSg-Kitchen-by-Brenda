@@ -8,6 +8,8 @@ const MENU = {
   kisinia: { name: "Kisinia", cents: 3000, options: ["2 chapatis", "Fried cassava", "Fries"] },
 };
 
+const DELIVERY_FEE_CENTS = 499;
+
 class UserError extends Error {}
 
 function clean(v, max) {
@@ -49,4 +51,10 @@ function validateCustomer(c) {
   return { name, phone, mode, addr, when, note };
 }
 
-module.exports = { MENU, UserError, priceOrder, validateCustomer, clean };
+// Adds the delivery fee as its own line when the customer chose delivery.
+function withDelivery(lines, mode) {
+  if (mode !== "Delivery") return lines;
+  return lines.concat([{ label: "Delivery fee", qty: 1, unitCents: DELIVERY_FEE_CENTS }]);
+}
+
+module.exports = { MENU, UserError, priceOrder, validateCustomer, clean, withDelivery, DELIVERY_FEE_CENTS };

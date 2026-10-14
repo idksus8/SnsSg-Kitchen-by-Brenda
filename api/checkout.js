@@ -1,12 +1,13 @@
 const Stripe = require("stripe");
-const { priceOrder, validateCustomer, UserError } = require("./_menu");
+const { priceOrder, validateCustomer, withDelivery, UserError } = require("./_menu");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-    const { lines } = priceOrder(body.items);
+    const priced = priceOrder(body.items);
     const c = validateCustomer(body.customer);
+    const lines = withDelivery(priced.lines, c.mode);
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const origin = process.env.SITE_URL || "https://" + req.headers.host;
