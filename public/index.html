@@ -238,7 +238,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
 <header class="topbar">
   <div class="topbar-in">
     <div class="brand">test1</div>
-    <div class="tb-r"><button class="acct-btn" id="acctBtn" type="button" hidden>Log in</button><button class="cart-btn" id="cartTop" type="button" aria-label="Open your order">Your order <span class="n" id="cartTopN">0</span></button></div>
+    <div class="tb-r"><button class="acct-btn" id="acctBtn" type="button" hidden>Log in</button><button class="acct-btn" id="signBtn" type="button" hidden>Sign up</button><button class="cart-btn" id="cartTop" type="button" aria-label="Open your order">Your order <span class="n" id="cartTopN">0</span></button></div>
   </div>
 </header>
 
@@ -706,7 +706,7 @@ function openDetails(){
 var ACCT=null, SES=null;
 try{ SES=JSON.parse(localStorage.getItem("snssg-auth")||"null"); }catch(e){}
 function setSes(s){ SES=s; try{ if(s) localStorage.setItem("snssg-auth",JSON.stringify(s)); else localStorage.removeItem("snssg-auth"); }catch(e){} drawAcct(); }
-function drawAcct(){ var b=$("acctBtn"); b.hidden=!ACCT; b.textContent=SES?"Account":"Log in"; }
+function drawAcct(){ var b=$("acctBtn"); b.hidden=!ACCT; b.textContent=SES?"Account":"Log in"; $("signBtn").hidden=!ACCT||!!SES; }
 function sb(path,body,tok,method){
   var h={"Content-Type":"application/json",apikey:ACCT.key};
   tok=tok||(ACCT.key.indexOf("eyJ")===0?ACCT.key:"");
@@ -735,12 +735,14 @@ function authView(box,mode,done,back){
     '<label class="f">Email<input type="email" id="aEmail" autocomplete="email"></label>'+
     '<label class="f">Password'+(su?' (at least 8 characters)':'')+'<input type="password" id="aPass" autocomplete="'+(su?'new':'current')+'-password"></label>'+
     '<label class="opt"><input type="checkbox" id="aShow"> Show password</label>'+
+    (su?'':'<p class="fine" style="padding:0"><button class="lnk" type="button" id="aForgot">Forgot password?</button></p>')+
     '<p class="err" id="aErr" role="alert"></p>'+
     '<button class="btn" type="button" id="aGo">'+(su?'Create account':'Log in')+'</button>'+
     '<p class="fine" style="padding:0">'+(su?'Already have an account? <button class="lnk" type="button" id="aSw">Log in</button>':'New here? <button class="lnk" type="button" id="aSw">Create an account</button>')+(back?' &middot; <button class="lnk" type="button" id="aBack">Back</button>':'')+'</p>';
   $("aShow").onchange=function(){ $("aPass").type=this.checked?"text":"password"; };
   $("aSw").onclick=function(){ authView(box,su?"login":"signup",done,back); };
   if(back) $("aBack").onclick=back;
+  if($("aForgot")) $("aForgot").onclick=function(){ forgotView(box,done,back); };
   $("aGo").onclick=function(){
     var em=$("aEmail").value.trim(), pw=$("aPass").value, err=$("aErr"), go=$("aGo");
     var nm=su?$("aName").value.trim():"", ph=su?$("aPhone").value.trim():"";
@@ -757,6 +759,61 @@ function authView(box,mode,done,back){
       $("aOk").onclick=back||function(){ $("authDlg").close(); };
     }).catch(function(e){ go.disabled=false; err.textContent=e.message; });
   };
+}
+
+// Forgot password: asks Supabase to email a reset link. The link brings the customer back to the site (see recoveryFromLink).
+function forgotView(box,done,back){
+  box.innerHTML='<h2>Reset your password</h2><p class="fine" style="padding:0">Enter your email and we will send you a link to choose a new password.</p>'+
+    '<label class="f">Email<input type="email" id="fEmail" autocomplete="email"></label>'+
+    '<p class="err" id="fErr" role="alert"></p>'+
+    '<button class="btn" type="button" id="fGo">Send reset link</button>'+
+    '<p class="fine" style="padding:0"><button class="lnk" type="button" id="fBack">Back to log in</button></p>';
+  $("fBack").onclick=function(){ authView(box,"login",done,back); };
+  $("fGo").onclick=function(){
+    var em=$("fEmail").value.trim(), err=$("fErr"), go=$("fGo");
+    if(!/^\S+@\S+\.\S+$/.test(em)){ err.textContent="Enter a valid email address."; return; }
+    go.disabled=true; err.textContent="";
+    sb("/auth/v1/recover",{email:em}).then(function(){
+      box.innerHTML='<h2>Check your email</h2><p>If there is an account for <strong>'+esc(em)+'</strong>, we sent a link to reset the password. It can take a few minutes. Check your spam folder too.</p><button class="btn" type="button" id="fOk">Back to log in</button>';
+      $("fOk").onclick=function(){ authView(box,"login",done,back); };
+    }).catch(function(e){ go.disabled=false; err.textContent=e.message; });
+  };
+}
+// Runs when the customer opens the reset link from their email: Supabase sends them back here with a temporary token in the address.
+function recoveryFromLink(){
+  var h=location.hash||"";
+  if(h.length<2) return;
+  var q=new URLSearchParams(h.replace(/^#/,""));
+  var clear=function(){ try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} };
+  var box=$("authBody");
+  if(q.get("error")||q.get("error_code")){
+    clear();
+    if(q.get("error_code")==="otp_expired"||q.get("type")==="recovery"||/expired|invalid/i.test(q.get("error_description")||"")){
+      box.innerHTML='<h2>Link expired</h2><p>That reset link is no longer valid. Please request a new one.</p><button class="btn" type="button" id="rNew">Request a new link</button>';
+      $("rNew").onclick=function(){ forgotView(box,function(){ $("authDlg").close(); toast("You are logged in"); }); };
+      $("authDlg").showModal();
+    }
+    return;
+  }
+  if(q.get("type")!=="recovery"||!q.get("access_token")) return;
+  var access=q.get("access_token"), refresh=q.get("refresh_token")||"", exp=Date.now()+(+q.get("expires_in")||3600)*1000;
+  clear();
+  box.innerHTML='<h2>Choose a new password</h2>'+
+    '<label class="f">New password (at least 8 characters)<input type="password" id="rPass" autocomplete="new-password"></label>'+
+    '<label class="opt"><input type="checkbox" id="rShow"> Show password</label>'+
+    '<p class="err" id="rErr" role="alert"></p>'+
+    '<button class="btn" type="button" id="rGo">Save new password</button>';
+  $("rShow").onchange=function(){ $("rPass").type=this.checked?"text":"password"; };
+  $("rGo").onclick=function(){
+    var pw=$("rPass").value, err=$("rErr"), go=$("rGo");
+    if(pw.length<8){ err.textContent="Your password needs at least 8 characters."; return; }
+    go.disabled=true; err.textContent="";
+    sb("/auth/v1/user",{password:pw},access,"PUT").then(function(u){
+      setSes({access:access,refresh:refresh,exp:exp,user:u});
+      $("authDlg").close(); toast("Password updated. You are logged in.");
+    }).catch(function(e){ go.disabled=false; err.textContent=e.message; });
+  };
+  $("authDlg").showModal();
 }
 
 function ordHTML(o){
@@ -787,6 +844,10 @@ function openAcct(){
   });
 }
 $("acctBtn").onclick=openAcct;
+$("signBtn").onclick=function(){
+  authView($("authBody"),"signup",function(){ $("authDlg").close(); toast("Your account is ready"); });
+  $("authDlg").showModal();
+};
 $("authX").onclick=function(){ $("authDlg").close(); };
 $("acctX").onclick=function(){ $("acctDlg").close(); };
 
@@ -875,6 +936,7 @@ render();
 fetch("/api/config").then(function(r){ return r.json(); }).then(function(c){
   if(c&&c.enabled) ACCT={url:c.url,key:c.key};
   drawAcct();
+  if(ACCT) recoveryFromLink();
 }).catch(function(){});
 </script>
 </body>
