@@ -238,7 +238,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
 <header class="topbar">
   <div class="topbar-in">
     <div class="brand">test1</div>
-    <div class="tb-r"><button class="acct-btn" id="acctBtn" type="button" hidden>Log in</button><button class="cart-btn" id="cartTop" type="button" aria-label="Open your order">Your order <span class="n" id="cartTopN">0</span></button></div>
+    <div class="tb-r"><button class="acct-btn" id="acctBtn" type="button" hidden>Log in</button><button class="acct-btn" id="signBtn" type="button" hidden>Sign up</button><button class="cart-btn" id="cartTop" type="button" aria-label="Open your order">Your order <span class="n" id="cartTopN">0</span></button></div>
   </div>
 </header>
 
@@ -706,7 +706,7 @@ function openDetails(){
 var ACCT=null, SES=null;
 try{ SES=JSON.parse(localStorage.getItem("snssg-auth")||"null"); }catch(e){}
 function setSes(s){ SES=s; try{ if(s) localStorage.setItem("snssg-auth",JSON.stringify(s)); else localStorage.removeItem("snssg-auth"); }catch(e){} drawAcct(); }
-function drawAcct(){ var b=$("acctBtn"); b.hidden=!ACCT; b.textContent=SES?"Account":"Log in"; }
+function drawAcct(){ var b=$("acctBtn"); b.hidden=!ACCT; b.textContent=SES?"Account":"Log in"; $("signBtn").hidden=!ACCT||!!SES; }
 function sb(path,body,tok,method){
   var h={"Content-Type":"application/json",apikey:ACCT.key};
   tok=tok||(ACCT.key.indexOf("eyJ")===0?ACCT.key:"");
@@ -844,6 +844,10 @@ function openAcct(){
   });
 }
 $("acctBtn").onclick=openAcct;
+$("signBtn").onclick=function(){
+  authView($("authBody"),"signup",function(){ $("authDlg").close(); toast("Your account is ready"); });
+  $("authDlg").showModal();
+};
 $("authX").onclick=function(){ $("authDlg").close(); };
 $("acctX").onclick=function(){ $("acctDlg").close(); };
 
