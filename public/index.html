@@ -167,13 +167,12 @@ dialog[open]::backdrop{animation:fade .25s ease}
 #toast.show{display:block;animation:toastIn .3s ease}
 @media (min-width:901px){#toast{bottom:32px}}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.dv{display:inline-block;position:relative;vertical-align:-.22em}
-.dial{display:inline-flex;align-items:flex-start;line-height:1.15em;font-variant-numeric:tabular-nums}
-.dc{display:inline-block;height:1.15em;overflow:hidden;width:.64em;text-align:center}
+.dv{display:inline-block;position:relative}
+.dial{display:inline-flex;align-items:baseline;line-height:var(--h,1.2em);font-variant-numeric:tabular-nums}
+.dc{display:inline-block;height:var(--h,1.2em);width:var(--w,.62em);overflow:hidden;overflow:clip;text-align:center}
 .strip{display:flex;flex-direction:column;transition:transform .95s cubic-bezier(.25,1.12,.4,1)}
-.strip i{display:block;height:1.15em;line-height:1.15em;font-style:normal}
-.dp{display:inline-block;height:1.15em;line-height:1.15em}
-.cart-btn .n .dial{line-height:1.15em}
+.strip i{display:block;height:var(--h,1.2em);line-height:var(--h,1.2em);font-style:normal}
+.dp{display:inline-block;height:var(--h,1.2em);line-height:var(--h,1.2em)}
 
 @keyframes marq{to{transform:translateX(-50%)}}
 @keyframes steam{0%{transform:translateY(0) scaleX(1);opacity:0}20%{opacity:.65}100%{transform:translateY(-130px) scaleX(2.4);opacity:0}}
@@ -379,9 +378,9 @@ function openItem(m){
   $("itemDlg").showModal();
 }
 function refreshItem(){
-  dialSet($("iQty"),String(curQty),"iqty");
+  dialSet($("iQty"),String(curQty),"iqty",false,true);
   if(!$("iPrice")) $("iAdd").innerHTML='Add to order <span class="dv" id="iPrice"></span>';
-  dialSet($("iPrice"),money(cur.price*curQty),"iprice");
+  dialSet($("iPrice"),money(cur.price*curQty),"iprice",false,true);
 }
 $("iMinus").onclick=function(){ if(curQty>1){curQty--;refreshItem();} };
 $("iPlus").onclick=function(){ if(curQty<50){curQty++;refreshItem();} };
@@ -416,12 +415,19 @@ function cartHTML(){
 var lastN=count();
 var DIALS={};
 var DIGITS=(function(){ var s=""; for(var k=0;k<20;k++){ s+="<i>"+(k%10)+"</i>"; } return s; })();
+function zeros(s){ return String(s).replace(/\d/g,"0"); }
 // Rolling number, like a multi-dial combination lock. Each digit scrolls to its new value.
-function dialSet(el,text,key,fresh){
+// fresh: show the number with no animation. zeroStart: if there is no earlier value, roll up from zeros.
+function dialSet(el,text,key,fresh,zeroStart){
   if(!el) return;
   var a=String(text);
-  var prev=(!fresh && DIALS[key]!==undefined)?String(DIALS[key]):a;
+  var prev=a;
+  if(!fresh){ if(DIALS[key]!==undefined) prev=String(DIALS[key]); else if(zeroStart) prev=zeros(a); }
   DIALS[key]=a;
+  // Whole-pixel cell sizes keep every digit on exactly the same line.
+  var fs=parseFloat(getComputedStyle(el).fontSize)||16;
+  var h=Math.round(fs*1.2), w=Math.round(fs*0.62);
+  el.style.setProperty("--h",h+"px"); el.style.setProperty("--w",w+"px");
   var pad=a.length-prev.length;
   var html='<span class="sr">'+esc(a)+'</span><span class="dial" aria-hidden="true">';
   for(var i=0;i<a.length;i++){
@@ -439,15 +445,14 @@ function dialSet(el,text,key,fresh){
   var instant=reduceMotion();
   Array.prototype.forEach.call(strips,function(s){
     var f=+s.getAttribute("data-f"), e=+s.getAttribute("data-e"), sp=s.getAttribute("data-s")==="1";
-    s.style.transform="translateY(-"+((instant||!sp?(sp?e:f):f)*1.15)+"em)";
-    if(instant&&sp) s.style.transform="translateY(-"+(e*1.15)+"em)";
+    s.style.transform="translateY(-"+(((instant&&sp)?e:f)*h)+"px)";
   });
   if(instant) return;
   void el.offsetWidth;
   Array.prototype.forEach.call(strips,function(s,i){
     if(s.getAttribute("data-s")!=="1") return;
     s.style.transitionDelay=(i*110)+"ms";
-    s.style.transform="translateY(-"+(+s.getAttribute("data-e")*1.15)+"em)";
+    s.style.transform="translateY(-"+(+s.getAttribute("data-e")*h)+"px)";
   });
 }
 function rollPrice(item){
@@ -456,8 +461,13 @@ function rollPrice(item){
   DIALS[key]=t.replace(/\d/g,"0");
   dialSet(el,t,key);
 }
-function initDials(root,prefix,fresh){
-  Array.prototype.forEach.call(root.querySelectorAll(".dv"),function(el){ dialSet(el,el.getAttribute("data-t"),prefix+el.getAttribute("data-k"),fresh); });
+// mode: "fresh" = no animation, "new" = roll up from zeros when there was no earlier value, "zero" = always roll up from zeros
+function initDials(root,prefix,mode){
+  Array.prototype.forEach.call(root.querySelectorAll(".dv"),function(el){
+    var key=prefix+el.getAttribute("data-k");
+    if(mode==="zero") DIALS[key]=undefined;
+    dialSet(el,el.getAttribute("data-t"),key,mode==="fresh",true);
+  });
 }
 
 function reduceMotion(){ return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }
@@ -493,14 +503,14 @@ function render(){
   var h=cartHTML();
   $("sideBody").innerHTML=h;
   $("cartDlgBody").innerHTML=h;
-  initDials($("sideBody"),"side"); initDials($("cartDlgBody"),"dlg");
+  initDials($("sideBody"),"side","new"); initDials($("cartDlgBody"),"dlg","new");
   var n=count();
-  dialSet($("cartTopN"),String(n),"badge");
+  dialSet($("cartTopN"),String(n),"badge",false,true);
   if(n>lastN){ bump($("cartTopN")); bump($("mbarBtn")); }
   lastN=n;
 
   $("mbar").hidden = n===0;
-  dialSet($("mbN"),String(n),"mbn"); dialSet($("mbT"),money(total()),"mbt");
+  dialSet($("mbN"),String(n),"mbn",false,true); dialSet($("mbT"),money(total()),"mbt",false,true);
   save();
 }
 function cartClick(e){
@@ -534,7 +544,7 @@ function openCheckout(){
    '<p class="fine" style="padding:0">You pay on Stripe\'s secure page. Apple Pay and cards are accepted. Brenda is texted as soon as you pay.</p>';
   var radios=document.querySelectorAll('input[name="mode"]');
   Array.prototype.forEach.call(radios,function(r){ r.onchange=function(){ var del=(document.querySelector('input[name="mode"]:checked').value==="Delivery"); $("addrWrap").hidden=!del; $("feeRow").hidden=!del; if(del){ DIALS["cofee"]=money(DELIVERY_FEE).replace(/\d/g,"0"); dialSet($("coFee"),money(DELIVERY_FEE),"cofee"); } dialSet($("coTotal"),money(total()+(del?DELIVERY_FEE:0)),"cototal"); if(del) $("cAddr").focus(); }; });
-  initDials($("coBody"),"co",true);
+  initDials($("coBody"),"co","zero");
   $("cGo").onclick=pay;
   $("coDlg").showModal();
 }
@@ -565,7 +575,7 @@ function pay(){
     });
 }
 
-["list-soups","list-chapati","list-fish"].forEach(function(id){ initDials($(id),"card",true); });
+["list-soups","list-chapati","list-fish"].forEach(function(id){ initDials($(id),"card","fresh"); });
 render();
 (function(){
   var p=new URLSearchParams(location.search);
