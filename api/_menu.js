@@ -26,8 +26,10 @@ function priceOrder(items) {
     if (!Number.isInteger(qty) || qty < 1 || qty > 50) throw new UserError("Please check the quantities in your order.");
     let opt = "";
     if (m.options) {
-      opt = clean(it.opt, 40);
-      if (!m.options.includes(opt)) throw new UserError("Please choose a side for " + m.name + ".");
+      // Customers can pick one or more sides, sent as "A, B". Each must be on the menu; rebuilt in menu order.
+      const picked = Array.from(new Set(clean(it.opt, 100).split(",").map((x) => x.trim()).filter(Boolean)));
+      if (picked.length === 0 || !picked.every((x) => m.options.includes(x))) throw new UserError("Please choose a side for " + m.name + ".");
+      opt = m.options.filter((x) => picked.includes(x)).join(", ");
     }
     const note = clean(it.note, 120);
     let label = m.name + (opt ? " (" + opt + ")" : "") + (note ? " - Note: " + note : "");
