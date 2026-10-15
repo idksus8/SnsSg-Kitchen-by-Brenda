@@ -233,6 +233,19 @@ dialog[open]::backdrop{animation:fade .25s ease}
   .reveal{opacity:1;transform:none}
 }
 .tb-r{display:flex;align-items:center;gap:8px}
+.caution{position:relative;background:#F5C400;color:#111;text-align:center;padding:28px 16px}
+.caution::before,.caution::after{content:"";position:absolute;left:0;right:0;height:12px;background-color:#F5C400;background-image:linear-gradient(135deg,#111 25%,transparent 25%,transparent 50%,#111 50%,#111 75%,transparent 75%,transparent);background-size:40px 40px}
+.caution::before{top:0;animation:cautionR 1.6s linear infinite}
+.caution::after{bottom:0;animation:cautionL 1.6s linear infinite}
+@keyframes cautionR{to{background-position:40px 0}}
+@keyframes cautionL{to{background-position:-40px 0}}
+@media (prefers-reduced-motion: reduce){.caution::before,.caution::after{animation:none}}
+.caution p{margin:0;font-weight:800;font-size:clamp(.95rem,2.8vw,1.2rem);letter-spacing:.04em;text-transform:uppercase;line-height:1.35}
+.caution.mini{padding:26px 54px 26px 16px;border-radius:16px 16px 0 0;overflow:hidden}
+.caution.mini p{font-size:clamp(.8rem,3.4vw,1rem)}
+.zsteps{margin:0;padding-left:20px;display:grid;gap:6px}
+.zto{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:1.15rem;word-break:break-all}
+.caution p span{display:inline-block;background:#111;color:#F5C400;padding:2px 10px;border-radius:4px;margin-right:8px}
 .paidbanner{background:var(--green);color:var(--green-ink);border-radius:10px;padding:10px 14px;font-weight:700;margin:4px 0 10px}
 .sumbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 12px}
 .sumbox ul{list-style:none;margin:0;padding:0}
@@ -267,6 +280,8 @@ dialog[open]::backdrop{animation:fade .25s ease}
     <div class="tb-r"><button class="acct-btn" id="acctBtn" type="button" hidden>Log in</button><button class="acct-btn" id="signBtn" type="button" hidden>Sign up</button><button class="cart-btn" id="cartTop" type="button" aria-label="Open your order">Your order <span class="n" id="cartTopN">0</span></button></div>
   </div>
 </header>
+
+<div class="caution" role="note"><p><span>&#9888; Caution</span>Kitchen is only open Friday to Sunday</p></div>
 
 <section class="hero">
   <div class="hero-in">
@@ -367,6 +382,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
 <!-- Checkout dialog -->
 <dialog id="coDlg" aria-labelledby="coH">
   <button class="x" type="button" id="coX" aria-label="Close">&times;</button>
+  <div class="caution mini" role="note"><p><span>&#9888; Caution</span>Kitchen is only open Friday to Sunday</p></div>
   <div class="dlg-body" id="coBody"></div>
 </dialog>
 
@@ -395,6 +411,8 @@ var MENU = [
     options:{label:"Choose your sides (pick one or more)", values:["2 chapatis","Fried cassava","Fries"]}}
 ];
 var DELIVERY_FEE = 4.99;
+// Brenda's Zelle phone number or email. Customers send their payment here. The Zelle button stays hidden while this is empty.
+var ZELLE_TO = "832-276-0334";
 var cart = [];
 try { var saved = JSON.parse(localStorage.getItem("snssg-cart")||"[]"); if (Array.isArray(saved)) cart = saved.filter(function(l){return MENU.some(function(m){return m.id===l.id;});}); } catch(e){}
 
@@ -725,6 +743,7 @@ function openDetails(){
    '<div class="row"><strong>Total</strong><strong id="coTotal" class="dv" data-k="total" data-t="'+money(total())+'"></strong></div>'+
    '<p class="err" id="cErr" role="alert"></p>'+
    '<button class="btn" type="button" id="cGo">Pay with Apple Pay or card</button>'+
+   (ZELLE_TO?'<button class="btn alt" type="button" id="zGo">Pay with Zelle</button>':'')+
    '<p class="fine" style="padding:0">You pay on Stripe\'s secure page. Apple Pay and cards are accepted. Brenda is texted as soon as you pay.</p>';
   var radios=document.querySelectorAll('input[name="mode"]');
   Array.prototype.forEach.call(radios,function(r){ r.onchange=function(){
@@ -740,6 +759,7 @@ function openDetails(){
   }; });
   calInit();
   $("cGo").onclick=pay;
+  if($("zGo")) $("zGo").onclick=zelleStart;
   prefill();
   if(!$("coDlg").open) $("coDlg").showModal();
   initDials($("coBody"),"co","zero");
@@ -943,26 +963,71 @@ function lastHTML(){
     '<div class="sub" style="margin-top:8px">'+esc(o.mode||"Pickup")+(o.mode==="Delivery"&&o.addr?': '+esc(o.addr):'')+(o.when&&o.when!=="ASAP"?' &middot; '+esc(o.when):'')+'</div></div>';
 }
 
-var busy=false;
-function pay(){
-  if(busy) return;
+function readDetails(){
   var d={
     name:$("cName").value.trim(), phone:$("cPhone").value.trim(),
     mode:document.querySelector('input[name="mode"]:checked').value,
     addr:$("cAddr").value.trim(), when:"ASAP", note:$("cNote").value.trim()
   };
-  if(!d.name){ $("cErr").textContent="Enter your name."; $("cName").focus(); return; }
-  if(d.phone.replace(/\D/g,"").length<7){ $("cErr").textContent="Enter a phone number Brenda can reach."; $("cPhone").focus(); return; }
-  if(d.mode==="Delivery" && !d.addr){ $("cErr").textContent="Enter your delivery address."; $("cAddr").focus(); return; }
+  if(!d.name){ $("cErr").textContent="Enter your name."; $("cName").focus(); return null; }
+  if(d.phone.replace(/\D/g,"").length<7){ $("cErr").textContent="Enter a phone number Brenda can reach."; $("cPhone").focus(); return null; }
+  if(d.mode==="Delivery" && !d.addr){ $("cErr").textContent="Enter your delivery address."; $("cAddr").focus(); return null; }
   if(document.querySelector('input[name="when"]:checked').value==="Schedule"){
     var tv=$("cTime").value;
-    if(!cal.sel){ $("cErr").textContent="Pick a date on the calendar."; return; }
-    if(!tv){ $("cErr").textContent="Pick a time."; $("cTime").focus(); return; }
+    if(!cal.sel){ $("cErr").textContent="Pick a date on the calendar."; return null; }
+    if(!tv){ $("cErr").textContent="Pick a time."; $("cTime").focus(); return null; }
     var sd=parseYmd(cal.sel), tp=tv.split(":");
     sd.setHours(+tp[0],+tp[1],0,0);
-    if(sd<new Date()){ $("cErr").textContent="That time has already passed. Pick a later time."; return; }
+    if(sd<new Date()){ $("cErr").textContent="That time has already passed. Pick a later time."; return null; }
     d.when=fmtDay(parseYmd(cal.sel),false)+" at "+fmtTime(tv);
   }
+  return d;
+}
+// ---- Pay with Zelle: shows Brenda's Zelle details, then sends her the order text once the customer says they paid.
+function zelleStart(){
+  if(busy) return;
+  var d=readDetails(); if(!d) return;
+  var amt=total()+(d.mode==="Delivery"?DELIVERY_FEE:0);
+  var items=cart.map(function(l){return {id:l.id,qty:l.qty,opt:l.opt,note:l.note};});
+  $("coBody").innerHTML='<h2 id="coH">Pay with Zelle</h2>'+
+    '<div class="sumbox"><div class="tot" style="border:0;margin:0;padding:0"><span>Send exactly</span><span>'+money(amt)+'</span></div>'+
+    '<div class="sub" style="margin-top:8px">To Brenda on Zelle:</div>'+
+    '<div class="zto"><strong>'+esc(ZELLE_TO)+'</strong><button class="lnk" type="button" id="zCopy">Copy</button></div></div>'+
+    '<ol class="zsteps"><li>Open your bank app and choose Zelle.</li><li>Send '+money(amt)+' to the number or email above, with your name in the memo.</li><li>Come back here and tap "I sent the payment" so Brenda gets your order.</li></ol>'+
+    '<p class="err" id="zErr" role="alert"></p>'+
+    '<button class="btn" type="button" id="zSent">I sent the payment</button>'+
+    '<button class="btn alt" type="button" id="zBack">Back</button>'+
+    '<p class="fine" style="padding:0">Brenda starts your order after she sees your Zelle payment. Zelle moves money straight between bank accounts, so it cannot be refunded through this site.</p>';
+  $("zCopy").onclick=function(){
+    var done=function(){ toast("Zelle details copied"); };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(ZELLE_TO).then(done,function(){ toast("Press and hold the number to copy it"); });
+    else toast("Press and hold the number to copy it");
+  };
+  $("zBack").onclick=function(){
+    openDetails();
+    $("cName").value=d.name; $("cPhone").value=d.phone; $("cNote").value=d.note;
+    if(d.mode==="Delivery"){ document.querySelector('input[name="mode"][value="Delivery"]').click(); $("cAddr").value=d.addr; }
+  };
+  $("zSent").onclick=function(){
+    if(busy) return;
+    busy=true; var b=$("zSent"); b.disabled=true; b.textContent="Sending your order..."; $("zErr").textContent="";
+    fetch("/api/zelle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items:items,customer:d})})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
+      .then(function(x){
+        if(!x.ok) throw new Error((x.j&&x.j.error)||"We could not send your order to Brenda. Please try again.");
+        busy=false; cart=[]; save(); render();
+        $("coBody").innerHTML='<h2 id="coH">Thank you!</h2><p>Brenda has your order. She will contact you once she sees your Zelle payment of '+money(amt)+'.</p><button class="btn" type="button" id="zDone">Done</button>';
+        $("zDone").onclick=function(){ $("coDlg").close(); };
+        setTimeout(confetti,450);
+      })
+      .catch(function(e){ busy=false; b.disabled=false; b.textContent="I sent the payment"; $("zErr").textContent=(e&&e.message)||"We could not send your order to Brenda. Please try again."; });
+  };
+}
+
+var busy=false;
+function pay(){
+  if(busy) return;
+  var d=readDetails(); if(!d) return;
   busy=true; $("cGo").disabled=true; $("cGo").classList.add("loading"); $("cGo").textContent="Opening secure checkout..."; $("cErr").textContent="";
   var payload={items:cart.map(function(l){return {id:l.id,qty:l.qty,opt:l.opt,note:l.note};}),customer:d};
   var wasIn=!!SES;
