@@ -1,6 +1,7 @@
 const Stripe = require("stripe");
 const { enabled, bearer, userFromToken } = require("./_supabase");
 const { priceOrder, validateCustomer, withDelivery, UserError } = require("./_menu");
+const { deliveryFee } = require("./_uber");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -8,7 +9,7 @@ module.exports = async (req, res) => {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
     const priced = priceOrder(body.items);
     const c = validateCustomer(body.customer);
-    const lines = withDelivery(priced.lines, c.mode);
+    const lines = withDelivery(priced.lines, c.mode, c.mode === "Delivery" ? await deliveryFee(c.addr) : 0);
 
     // Logged-in customers send their token; guests send none. A bad token is rejected, never treated as a guest.
     let user = null;

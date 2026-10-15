@@ -2,6 +2,7 @@ const Stripe = require("stripe");
 const twilio = require("twilio");
 const { buildText } = require("./_text");
 const { enabled, saveOrder } = require("./_supabase");
+const { dispatchLink } = require("./_uber");
 
 async function rawBody(req) {
   const chunks = [];
@@ -44,7 +45,9 @@ module.exports = async (req, res) => {
           });
         } catch (e) { console.error("save order error", e && e.message); }
       }
-      const body = buildText(session, items.data);
+      const md2 = session.metadata || {};
+      const link = md2.mode === "Delivery" ? dispatchLink(process.env.SITE_URL || "https://" + req.headers.host, session.id) : "";
+      const body = buildText(session, items.data, link);
       const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
       await client.messages.create({ to: process.env.OWNER_PHONE, from: process.env.TWILIO_FROM, body });
     } catch (e) {

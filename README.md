@@ -1,4 +1,4 @@
-# test1: online ordering with Stripe and order texts
+# SnsSg Kitchen by Brenda: online ordering with Stripe and order texts
 
 What this does: customers build an order on the site, pay on Stripe's secure page (Apple Pay or card), and you get a text with the full order as soon as the payment goes through.
 
@@ -8,6 +8,9 @@ Files
 - api/webhook.js : Stripe tells this a payment worked, and it texts you the order
 - api/_menu.js : the prices the server trusts
 - api/_text.js : the wording of the text you receive
+- api/_notify.js : sends the order alert by text, email or phone notification, whichever you set up
+- api/zelle.js : texts you the order when a customer chooses Pay with Zelle
+- api/_uber.js, api/quote.js, api/dispatch.js : Uber Direct couriers (live delivery price, and a link in your order text to book the courier when the food is ready)
 - api/config.js, api/orders.js, api/_supabase.js : accounts and order history (step 6)
 - supabase/schema.sql : the orders table, run once in Supabase (step 6)
 
@@ -18,7 +21,19 @@ Files
 2. In the dashboard, open Developers > API keys and copy the Secret key. Start with the TEST key (starts with sk_test).
 3. Under Settings > Payment methods, make sure cards and Apple Pay are on. On Stripe's own checkout page, Apple Pay shows up as the first choice for customers on iPhone, iPad or Mac (Safari) who have a card in Wallet, and no domain setup is needed. To test Apple Pay yourself, use one of those devices.
 
-### 2. Twilio (sends the text to your phone)
+### 2. Order alerts (pick at least one: email, phone notification, or Twilio text)
+Brenda needs an alert for every order. Set up any of these (you can use more than one). Without any, nobody is notified.
+
+**Email (Resend), quick and private:**
+1. Make a free account at resend.com using the email address Brenda wants the orders sent to. (Resend's free test sender only delivers to the email you signed up with.)
+2. Under API Keys, create a key.
+3. In Vercel add RESEND_API_KEY (the key) and NOTIFY_EMAIL (that same email address).
+
+**Phone notification (ntfy), fastest:**
+1. Install the free ntfy app on Brenda's phone and subscribe to a long random topic name, like snssg-orders-x7k2q9m4v8.
+2. In Vercel add NTFY_TOPIC with that same topic name. Anyone who learns the topic name can read the orders, so keep it secret.
+
+**Text message (Twilio), takes days to approve:**
 1. Make an account at twilio.com and buy a phone number. A toll-free number is the simplest.
 2. US carriers require new numbers to be registered or verified before app texts are delivered. Twilio's console walks you through it (toll-free verification, or A2P 10DLC for a local number). Approval can take days. Until it is approved, texts may be blocked.
 3. Copy your Account SID, Auth Token and the Twilio phone number.
@@ -64,9 +79,17 @@ Good to know:
 - There is no "forgot password" button yet. You can send a reset email from Supabase > Authentication > Users.
 - Brenda's order text works the same for guests and account holders.
 
+### 7. Uber Direct couriers (optional)
+Until you add ALL of these in Vercel (then redeploy), delivery stays a flat $4.99 and nothing is booked automatically.
+1. Get Uber Direct access (Uber's intake form on merchants.ubereats.com) and create API credentials.
+2. Add in Vercel: UBER_CLIENT_ID, UBER_CLIENT_SECRET, UBER_CUSTOMER_ID, PICKUP_ADDRESS (your kitchen address, like 123 Main St, Houston, TX 77001), PICKUP_NAME (optional), and DISPATCH_SECRET (any long random text, keep it private).
+3. Customers then see Uber's live price for their address, and delivery orders texts end with a link. Open it when the food is ready and tap Send Uber courier. The courier is NOT booked automatically at payment, so a driver never arrives before the food is cooked.
+
 ## Good to know
 - Changing a price or dish: edit it in BOTH api/_menu.js (the price customers are charged) and the MENU list near the bottom of public/index.html (what customers see).
 - Cards and Apple Pay both work. Apple Pay is a way of paying by card, so Stripe cannot turn on Apple Pay while turning cards off.
-- Zelle is not available through Stripe. Do not collect orders through Apple Cash either: Apple's terms do not allow it for business use.
+- Zelle is not part of Stripe checkout. The "Pay with Zelle" button shows your Zelle number or email and texts you the order when the customer says they sent the money. To turn it on, put your Zelle phone number or email in the ZELLE_TO line near the top of the script in public/index.html. While that line is empty the button stays hidden.
+- Zelle orders are NOT confirmed until you see the money in your Zelle app, they are not saved to order history, and they depend on the Twilio text reaching you. Your bank may require a business account for business payments.
+- Do not collect orders through Apple Cash: Apple's terms do not allow it for business use.
 - This does not add sales tax or a delivery fee. Ask your accountant about Texas sales tax on prepared food. Stripe Tax is one option.
 - Stripe takes 2.9% + 30 cents per card payment, with no monthly fee.

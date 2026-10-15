@@ -54,9 +54,9 @@ function validateCustomer(c) {
 }
 
 // Adds the delivery fee as its own line when the customer chose delivery.
-function withDelivery(lines, mode) {
+function withDelivery(lines, mode, feeCents) {
   if (mode !== "Delivery") return lines;
-  return lines.concat([{ label: "Delivery fee", qty: 1, unitCents: DELIVERY_FEE_CENTS }]);
+  return lines.concat([{ label: "Delivery fee", qty: 1, unitCents: Number.isInteger(feeCents) ? feeCents : DELIVERY_FEE_CENTS }]);
 }
 
 module.exports = { MENU, UserError, priceOrder, validateCustomer, clean, withDelivery, DELIVERY_FEE_CENTS };

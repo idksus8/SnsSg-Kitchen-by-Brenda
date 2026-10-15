@@ -1,7 +1,7 @@
 // Builds the order text that is sent to Brenda.
 function money(cents) { return "$" + (cents / 100).toFixed(2); }
 
-function buildText(session, lineItems) {
+function buildText(session, lineItems, dispatchUrl) {
   const md = session.metadata || {};
   const lines = lineItems.map((l) => l.quantity + " x " + l.description + " - " + money(l.amount_total));
   const parts = [
@@ -18,7 +18,8 @@ function buildText(session, lineItems) {
   if (md.note) parts.push("Notes: " + md.note);
   const email = session.customer_details && session.customer_details.email;
   if (email) parts.push("Email: " + email);
-  return parts.join("\n").slice(0, 1500);
+  if (dispatchUrl) parts.push("", "Food ready? Tap to send an Uber courier:", dispatchUrl);
+  return parts.join("\n").slice(0, 1800);
 }
 
 module.exports = { buildText, money };

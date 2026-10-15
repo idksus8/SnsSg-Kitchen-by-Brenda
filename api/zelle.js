@@ -2,6 +2,7 @@
 // The prices are re-checked on the server, just like card checkout. Nothing is charged here.
 const { notify } = require("./_notify");
 const { priceOrder, validateCustomer, withDelivery, UserError } = require("./_menu");
+const { deliveryFee } = require("./_uber");
 
 function money(cents) { return "$" + (cents / 100).toFixed(2); }
 
@@ -11,7 +12,7 @@ module.exports = async (req, res) => {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
     const priced = priceOrder(body.items);
     const c = validateCustomer(body.customer);
-    const lines = withDelivery(priced.lines, c.mode);
+    const lines = withDelivery(priced.lines, c.mode, c.mode === "Delivery" ? await deliveryFee(c.addr) : 0);
     const total = lines.reduce((s, l) => s + l.unitCents * l.qty, 0);
 
     const parts = [
