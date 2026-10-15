@@ -4,6 +4,7 @@ const MENU = {
   goat: { name: "Goat Meat Pepper Soup", cents: 2700 },
   kongoro: { name: "Beef Kongoro (Cow Feet)", cents: 2000 },
   beef: { name: "Beef Soup", cents: 2500 },
+  mtori: { name: "Beef Mtori (Green Banana Puree)", cents: 2500 },
   chapati: { name: "Chapati", cents: 250 },
   kisinia: { name: "Kisinia", cents: 3000, options: ["2 chapatis", "Fried cassava", "Fries"] },
 };
