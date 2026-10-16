@@ -456,7 +456,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
   <button class="btn" id="mbarBtn" type="button">View order (<span class="dv" id="mbN">0</span>) <span class="dv" id="mbT">$0.00</span></button>
 </div>
 
-<footer class="foot"><div>SnsSg Kitchen by Brenda. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 17</small></div></footer>
+<footer class="foot"><div>SnsSg Kitchen by Brenda. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 21</small></div></footer>
 <dialog id="confirmDlg" aria-labelledby="cfH">
   <div class="dlg-body">
     <h2 id="cfH">Are you sure?</h2>
@@ -623,20 +623,41 @@ function favRects(list){
   });
   return o;
 }
-// Cards that moved (a row filled or emptied) slide from their old spot to the new one; the section eases to its new height.
-function favShift(old,h0,sec){
-  var el=$("favs"), list=$("list-favs");
-  Array.prototype.forEach.call(list.children,function(c){
-    var f=c.querySelector(".fav"), o=f&&old[f.getAttribute("data-id")]; if(!o) return;
-    var n=c.getBoundingClientRect(), dx=o.left-n.left, dy=o.top-n.top;
+var FAV_GLIDE={duration:650,easing:"cubic-bezier(.45,0,.2,1)"};
+// Eases the section to its new height when a row appears or disappears.
+function favEase(h0,sec){
+  var el=$("favs"), h1=el.offsetHeight;
+  if(Math.abs(h1-h0)<=1) return;
+  var stop=favFollow(sec); el.style.overflow="hidden";
+  el.animate([{height:h0+"px"},{height:h1+"px"}],FAV_GLIDE).onfinish=function(){ el.style.overflow=""; stop(); };
+}
+// Glides every card from where it was (old rect) to where it is now.
+function favGlide(cards,old){
+  cards.forEach(function(k,i){
+    var o=old[i]; if(!o) return;
+    var n=k.getBoundingClientRect(), dx=o.left-n.left, dy=o.top-n.top;
     if(Math.abs(dx)<1&&Math.abs(dy)<1) return;
-    c.animate([{transform:"translate("+dx+"px,"+dy+"px)"},{transform:"none"}],{duration:500,easing:"cubic-bezier(.2,.8,.2,1)"});
+    k.animate([{transform:"translate("+dx+"px,"+dy+"px)"},{transform:"none"}],FAV_GLIDE);
   });
-  var h1=el.offsetHeight;
-  if(Math.abs(h1-h0)>1){
-    var stop=favFollow(sec); el.style.overflow="hidden";
-    el.animate([{height:h0+"px"},{height:h1+"px"}],{duration:500,easing:"cubic-bezier(.2,.8,.2,1)"}).onfinish=function(){ el.style.overflow=""; stop(); };
-  }
+}
+// A favorite is added: cards that moved slide from their old spot to the new one.
+function favShift(old,h0,sec){
+  var list=$("list-favs"), cards=Array.prototype.slice.call(list.children);
+  favGlide(cards,cards.map(function(c){ var f=c.querySelector(".fav"); return f&&old[f.getAttribute("data-id")]; }));
+  favEase(h0,sec);
+}
+// A favorite is removed while others stay: its card lifts out of the row and fades while the cards after it glide into the gap right away.
+function favLeave(c,sec){
+  var el=$("favs"), list=$("list-favs"), h0=el.offsetHeight;
+  var cards=Array.prototype.slice.call(list.children).filter(function(k){ return k!==c; });
+  var old=cards.map(function(k){ return k.getBoundingClientRect(); });
+  cards.forEach(function(k){ k.getAnimations().forEach(function(a){ a.cancel(); }); });
+  var cr=c.getBoundingClientRect(), lr=list.getBoundingClientRect();
+  list.style.position="relative";
+  c.style.cssText+=";position:absolute;margin:0;pointer-events:none;left:"+(cr.left-lr.left)+"px;top:"+(cr.top-lr.top)+"px;width:"+cr.width+"px;height:"+cr.height+"px";
+  c.classList.add("fav-out"); setTimeout(function(){ c.remove(); },420);
+  favGlide(cards,old);
+  favEase(h0,sec);
 }
 // sec (optional) turns the animations on; page load calls this without it.
 function syncFavs(newId,sec){
@@ -697,7 +718,8 @@ function toggleFav(id,btn){
   }
   if(!adding&&!FAV_REDUCED){
     var c=document.querySelector('#list-favs .fav[data-id="'+id+'"]'); c=c&&c.closest(".itemw");
-    if(c){ c.classList.add("fav-out"); setTimeout(finish,380); return; }
+    if(c&&FAVS.length){ favLeave(c,{anchor:anchor,top0:top0}); return; } // others stay: this card fades out and the rest glide over
+    if(c){ c.classList.add("fav-out"); setTimeout(finish,380); return; }  // it was the last one: fade, then the section closes
   }
   finish();
 }
