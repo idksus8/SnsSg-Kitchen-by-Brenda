@@ -458,6 +458,14 @@ var MENU = [
   {id:"kisinia", cat:"fish", name:"Kisinia", price:30, img:5, desc:"Fried fish with tomato pepper sauce and shrimp, served with your choice of side.",
     options:{label:"Choose your sides (pick one or more)", values:["2 chapatis","Fried cassava","Fries"]}}
 ];
+// Scrolling banner: built from the menu and repeated so it always fills the screen, even on wide monitors.
+(function(){
+  var tr=document.querySelector(".marquee-track"); if(!tr) return;
+  var set=MENU.map(function(m){ return "<span>"+m.name.replace(/\s*\(.*?\)\s*/g,"")+"</span><span>&middot;</span>"; }).join("");
+  var half=""; for(var i=0;i<4;i++) half+=set;
+  tr.innerHTML=half+half;
+  tr.style.animationDuration=Math.max(20,Math.round(tr.scrollWidth/2/40))+"s";
+})();
 var DELIVERY_FEE = 4.99;
 // Brenda's Zelle phone number or email. Customers send their payment here. The Zelle button stays hidden while this is empty.
 var ZELLE_TO = "832-276-0334";
