@@ -964,7 +964,7 @@ function drawRecent(){
   sec.hidden=false;
   if(recentFor===SES.user.id) return;
   recentFor=SES.user.id;
-  $("recentBody").innerHTML='<p class="fine" style="padding:0">Signed in as <strong>'+esc(SES.user.email||"")+'</strong></p><div id="ordList"><p class="empty" style="padding:8px 0">Loading your orders...</p></div>';
+  $("recentBody").innerHTML='<div id="ordList"><p class="empty" style="padding:8px 0">Loading your orders...</p></div>';
   token().then(function(t){
     if(!t){ var e=new Error("Please log in to see your orders."); e.auth=true; throw e; }
     return fetch("/api/orders",{headers:{Authorization:"Bearer "+t}});
