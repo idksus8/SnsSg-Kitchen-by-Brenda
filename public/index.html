@@ -237,6 +237,21 @@ dialog[open]::backdrop{animation:fade .25s ease}
   .reveal{opacity:1;transform:none}
 }
 .tb-r{display:flex;align-items:center;gap:8px}
+/* Opening animation: brand title, then the screen splits open to show the site. */
+#intro{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;cursor:pointer}
+#intro .in-half{position:absolute;left:0;right:0;height:50.5%;background:#17372B}
+#intro .in-top{top:0;animation:introTop .9s cubic-bezier(.7,0,.2,1) 1.8s forwards}
+#intro .in-bot{bottom:0;animation:introBot .9s cubic-bezier(.7,0,.2,1) 1.8s forwards}
+#intro .in-mid{position:relative;text-align:center;color:#F0A91F;padding:0 20px;animation:introMid .35s ease 1.55s forwards}
+#intro .in-name{font-size:clamp(2.2rem,9vw,4.4rem);font-weight:800;letter-spacing:-.01em;line-height:1.05;animation:introIn .8s cubic-bezier(.2,.8,.2,1) .15s both}
+#intro .in-line{height:3px;background:#F0A91F;margin:16px auto;width:0;border-radius:3px;animation:introLine .7s ease .45s forwards}
+#intro .in-by{font-size:clamp(1.1rem,4vw,1.6rem);font-weight:700;color:#FFFFFF;animation:introIn .7s ease .6s both}
+#intro .in-tag{margin-top:8px;font-size:.95rem;letter-spacing:.14em;text-transform:uppercase;color:#cfd8d2;animation:introIn .7s ease .85s both}
+@keyframes introIn{from{opacity:0;transform:translateY(18px) scale(.95)}to{opacity:1;transform:none}}
+@keyframes introLine{to{width:min(220px,50vw)}}
+@keyframes introMid{to{opacity:0;transform:scale(1.06)}}
+@keyframes introTop{to{transform:translateY(-101%)}}
+@keyframes introBot{to{transform:translateY(101%)}}
 /* Scroll bars styled to the site: slim, rounded, green (gold in dark mode). */
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-track{background:var(--surface)}
@@ -287,6 +302,17 @@ dialog[open]::backdrop{animation:fade .25s ease}
 </style>
 </head>
 <body>
+<div id="intro" aria-hidden="true"><div class="in-half in-top"></div><div class="in-half in-bot"></div><div class="in-mid"><div class="in-name">SnsSg Kitchen</div><div class="in-line"></div><div class="in-by">by Brenda</div><div class="in-tag">Homemade &middot; cooked to order</div></div></div>
+<script>
+(function(){
+  var el=document.getElementById("intro"); if(!el) return;
+  if(window.matchMedia("(prefers-reduced-motion: reduce)").matches){ el.remove(); return; }
+  function done(){ if(el.parentNode) el.parentNode.removeChild(el); }
+  el.addEventListener("click",done);
+  el.querySelector(".in-top").addEventListener("animationend",function(e){ if(e.animationName==="introTop") done(); });
+  setTimeout(done,4500);
+})();
+</script>
 
 <header class="topbar">
   <div class="topbar-in">
