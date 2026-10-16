@@ -3,6 +3,8 @@
 const { notify } = require("./_notify");
 const { priceOrder, validateCustomer, withDelivery, UserError } = require("./_menu");
 const { deliveryFee } = require("./_uber");
+const { enabled, bearer, userFromToken, saveOrder } = require("./_supabase");
+const crypto = require("crypto");
 
 function money(cents) { return "$" + (cents / 100).toFixed(2); }
 
@@ -14,6 +16,15 @@ module.exports = async (req, res) => {
     const c = validateCustomer(body.customer);
     const lines = withDelivery(priced.lines, c.mode, c.mode === "Delivery" ? await deliveryFee(c.addr) : 0);
     const total = lines.reduce((s, l) => s + l.unitCents * l.qty, 0);
+
+    // Logged-in customers send their token so the order lands in their order history; guests send none.
+    let user = null;
+    const tok = bearer(req);
+    if (tok && enabled()) {
+      let down = false;
+      try { user = await userFromToken(tok); } catch (e) { down = true; console.error("auth check failed, continuing as guest", e && e.message); }
+      if (!user && !down) return res.status(401).json({ error: "Your login expired. Please log in again or continue as guest." });
+    }
 
     const parts = [
       "NEW ZELLE ORDER - SnsSg Kitchen by Brenda",
@@ -33,6 +44,19 @@ module.exports = async (req, res) => {
     if (!r.sent) {
       console.error("zelle order not delivered: alerts set up = " + r.configured);
       return res.status(500).json({ error: "We could not send your order to Brenda. Please try again or contact her directly." });
+    }
+    if (enabled()) {
+      // Best effort: a problem saving history never blocks the order alert Brenda already got.
+      try {
+        await saveOrder({
+          stripe_session_id: "zelle_" + crypto.randomUUID(),
+          user_id: user ? user.id : null,
+          email: user ? user.email || null : null,
+          name: c.name, phone: c.phone, mode: c.mode, addr: c.addr || null, when_text: c.when || null, note: c.note || null,
+          items: lines.map((l) => ({ label: l.label, qty: l.qty, cents: l.unitCents * l.qty })),
+          total_cents: total,
+        });
+      } catch (e) { console.error("save zelle order error", e && e.message); }
     }
     return res.status(200).json({ ok: true, totalCents: total });
   } catch (e) {

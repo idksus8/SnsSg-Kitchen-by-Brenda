@@ -37,7 +37,7 @@ async function saveOrder(row) {
 
 async function listOrders(userId) {
   const q = "user_id=eq." + encodeURIComponent(userId) +
-    "&select=id,created_at,items,total_cents,mode,addr,when_text,note&order=created_at.desc&limit=50";
+    "&select=id,stripe_session_id,created_at,items,total_cents,mode,addr,when_text,note&order=created_at.desc&limit=50";
   const r = await fetch(base() + "/rest/v1/orders?" + q, { headers: hdr(process.env.SUPABASE_SERVICE_KEY) });
   if (!r.ok) throw new Error("list orders " + r.status);
   return r.json();
