@@ -1206,6 +1206,19 @@ function readDetails(){
 function zelleStart(){
   if(busy) return;
   var d=readDetails(); if(!d) return;
+  // Check the phone number now, before showing where to send money, so nobody pays and then gets told their number is wrong.
+  busy=true; var zb=$("zGo"), zt=zb.textContent; zb.disabled=true; zb.textContent="Checking..."; $("cErr").textContent="";
+  var back=function(){ busy=false; zb.disabled=false; zb.textContent=zt; };
+  fetch("/api/checkphone",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:d.phone})})
+    .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
+    .then(function(x){
+      back();
+      if(!x.ok){ $("cErr").textContent=(x.j&&x.j.error)||"Please enter a real phone number Brenda can reach."; $("cPhone").focus(); return; }
+      zelleShow(d);
+    })
+    .catch(function(){ back(); zelleShow(d); });
+}
+function zelleShow(d){
   var amt=total()+(d.mode==="Delivery"?DELIVERY_FEE:0);
   var items=cart.map(function(l){return {id:l.id,qty:l.qty,opt:l.opt,note:l.note};});
   $("coBody").innerHTML='<h2 id="coH">Pay with Zelle</h2>'+
