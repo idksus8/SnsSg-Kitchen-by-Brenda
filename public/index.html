@@ -829,7 +829,7 @@ function openDetails(){
    '<label class="f">Name<input type="text" id="cName" autocomplete="name"></label>'+
    '<label class="f">Phone<input type="tel" id="cPhone" autocomplete="tel" placeholder="713-555-0123"></label>'+
    '<div class="seg" role="radiogroup" aria-label="Pickup or delivery"><label><input type="radio" name="mode" value="Pickup" checked> Pickup</label><label><input type="radio" name="mode" value="Delivery"> Delivery</label></div>'+
-   '<div class="collapse" id="addrWrap" inert><div><label class="f">Delivery address<input type="text" id="cAddr" autocomplete="street-address" placeholder="Street, city, state ZIP"></label></div></div>'+
+   '<div class="collapse" id="addrWrap" inert><div style="display:grid;gap:14px"><label class="f">Delivery address<input type="text" id="cAddr" autocomplete="address-line1" placeholder="Street address (add Apt or Unit if you have one)"></label><div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px"><label class="f">City<input type="text" id="cCity" autocomplete="address-level2"></label><label class="f">ZIP code<input type="text" id="cZip" autocomplete="postal-code" inputmode="numeric" maxlength="10"></label></div></div></div>'+
    '<div class="fw"><span id="whenLbl">When do you want it?</span><div class="seg" role="radiogroup" aria-labelledby="whenLbl"><label><input type="radio" name="when" value="ASAP" checked> ASAP</label><label><input type="radio" name="when" value="Schedule"> Schedule</label></div></div>'+
    '<div class="collapse" id="schedWrap" inert><div class="sched-in"><div class="cal" id="cal"></div><label class="f">Time<input type="time" id="cTime" step="900"></label><p class="calsum" id="calSum" aria-live="polite"></p></div></div>'+
    '<label class="f">Notes for Brenda (optional)<textarea id="cNote"></textarea></label>'+
@@ -854,8 +854,8 @@ function openDetails(){
   }; });
   calInit();
   $("cGo").onclick=pay;
-  $("cAddr").onchange=function(){
-    var a=this.value.trim(); if(!a) return;
+  var checkAddr=function(){
+    var a=addrNow(); if(!a) return;
     fetch("/api/quote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({addr:a})})
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
       .then(function(x){
@@ -866,6 +866,7 @@ function openDetails(){
         if(m&&m.value==="Delivery") dialSet($("coTotal"),money(total()+DELIVERY_FEE),"cototal");
       }).catch(function(){});
   };
+  ["cAddr","cCity","cZip"].forEach(function(id){ $(id).onchange=checkAddr; });
   if($("zGo")) $("zGo").onclick=zelleStart;
   prefill();
   if(!$("coDlg").open) $("coDlg").showModal();
@@ -1182,15 +1183,25 @@ function lastHTML(){
     '<div class="sub" style="margin-top:8px">'+esc(o.mode||"Pickup")+(o.mode==="Delivery"&&o.addr?': '+esc(o.addr):'')+(o.when&&o.when!=="ASAP"?' &middot; '+esc(o.when):'')+'</div></div>';
 }
 
+// The street, city and ZIP boxes are joined into one address line, so the server, the texts and the order history all keep working with one address.
+var ZIP_RE=/^\d{5}(-\d{4})?$/;
+function addrParts(){ return {street:$("cAddr").value.trim(), city:$("cCity").value.trim(), zip:$("cZip").value.trim()}; }
+function addrNow(){ var p=addrParts(); return (p.street&&p.city&&ZIP_RE.test(p.zip))?[p.street,p.city,p.zip].join(", "):""; }
 function readDetails(){
   var d={
     name:$("cName").value.trim(), phone:$("cPhone").value.trim(),
     mode:document.querySelector('input[name="mode"]:checked').value,
-    addr:$("cAddr").value.trim(), when:"ASAP", note:$("cNote").value.trim()
+    addr:"", when:"ASAP", note:$("cNote").value.trim()
   };
   if(!d.name){ $("cErr").textContent="Enter your name."; $("cName").focus(); return null; }
   if(d.phone.replace(/\D/g,"").length<7){ $("cErr").textContent="Enter a phone number Brenda can reach."; $("cPhone").focus(); return null; }
-  if(d.mode==="Delivery" && !d.addr){ $("cErr").textContent="Enter your delivery address."; $("cAddr").focus(); return null; }
+  if(d.mode==="Delivery"){
+    var p=addrParts();
+    if(!p.street){ $("cErr").textContent="Enter your street address."; $("cAddr").focus(); return null; }
+    if(!p.city){ $("cErr").textContent="Enter your city."; $("cCity").focus(); return null; }
+    if(!ZIP_RE.test(p.zip)){ $("cErr").textContent="Enter a 5-digit ZIP code."; $("cZip").focus(); return null; }
+    d.street=p.street; d.city=p.city; d.zip=p.zip; d.addr=addrNow();
+  }
   if(document.querySelector('input[name="when"]:checked').value==="Schedule"){
     var tv=$("cTime").value;
     if(!cal.sel){ $("cErr").textContent="Pick a date on the calendar."; return null; }
@@ -1246,7 +1257,7 @@ function zelleShow(d){
   $("zBack").onclick=function(){
     openDetails();
     $("cName").value=d.name; $("cPhone").value=d.phone; $("cNote").value=d.note;
-    if(d.mode==="Delivery"){ document.querySelector('input[name="mode"][value="Delivery"]').click(); $("cAddr").value=d.addr; }
+    if(d.mode==="Delivery"){ document.querySelector('input[name="mode"][value="Delivery"]').click(); $("cAddr").value=d.street||d.addr; $("cCity").value=d.city||""; $("cZip").value=d.zip||""; }
   };
   $("zSent").onclick=function(){
     if(busy) return;
