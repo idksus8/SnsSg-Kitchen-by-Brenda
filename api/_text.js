@@ -1,11 +1,12 @@
 // Builds the order text that is sent to Brenda.
+const { SHOP_NAME } = require("./_menu");
 function money(cents) { return "$" + (cents / 100).toFixed(2); }
 
 function buildText(session, lineItems, dispatchUrl) {
   const md = session.metadata || {};
   const lines = lineItems.map((l) => l.quantity + " x " + l.description + " - " + money(l.amount_total));
   const parts = [
-    "NEW PAID ORDER - test1",
+    "NEW PAID ORDER - " + SHOP_NAME,
     "",
     lines.join("\n"),
     "",

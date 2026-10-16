@@ -43,4 +43,23 @@ async function listOrders(userId) {
   return r.json();
 }
 
-module.exports = { enabled, bearer, userFromToken, saveOrder, listOrders };
+// How many saved orders have this kind of id since a time (for example "zelle_*").
+async function countSince(pattern, sinceIso) {
+  const q = "stripe_session_id=like." + encodeURIComponent(pattern) + "&created_at=gte." + encodeURIComponent(sinceIso) + "&select=id";
+  const r = await fetch(base() + "/rest/v1/orders?" + q, { headers: hdr(process.env.SUPABASE_SERVICE_KEY, { Prefer: "count=exact", Range: "0-0" }) });
+  if (!r.ok) throw new Error("count orders " + r.status);
+  const m = /\/(\d+)$/.exec(r.headers.get("content-range") || "");
+  return m ? +m[1] : 0;
+}
+
+// True if a Zelle order with the same phone and total was saved since `sinceIso`.
+async function findDuplicate(phone, totalCents, sinceIso) {
+  const q = "phone=eq." + encodeURIComponent(phone) + "&total_cents=eq." + encodeURIComponent(totalCents) +
+    "&stripe_session_id=like." + encodeURIComponent("zelle_*") + "&created_at=gte." + encodeURIComponent(sinceIso) + "&select=id&limit=1";
+  const r = await fetch(base() + "/rest/v1/orders?" + q, { headers: hdr(process.env.SUPABASE_SERVICE_KEY) });
+  if (!r.ok) throw new Error("find duplicate " + r.status);
+  const rows = await r.json();
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+module.exports = { enabled, bearer, userFromToken, saveOrder, listOrders, countSince, findDuplicate };

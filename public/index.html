@@ -495,6 +495,17 @@ var MENU = [
   tr.style.animationDuration=Math.max(20,Math.round(tr.scrollWidth/2/40))+"s";
 })();
 var DELIVERY_FEE = 4.99;
+var QUOTE = {addr:"", token:""};
+// The server found a different price than the one shown. Show the new one.
+function applyNewFee(j,addr){
+  DELIVERY_FEE=j.feeCents/100; QUOTE={addr:addr||"",token:j.quote||""};
+  if($("coFee")){
+    DIALS["cofee"]=money(DELIVERY_FEE).replace(/\d/g,"0"); dialSet($("coFee"),money(DELIVERY_FEE),"cofee");
+    var m=document.querySelector('input[name="mode"]:checked');
+    if(m&&m.value==="Delivery") dialSet($("coTotal"),money(total()+DELIVERY_FEE),"cototal");
+  }
+}
+function cents(x){ return Math.round(x*100); }
 // Brenda's Zelle phone number or email. Customers send their payment here. The Zelle button stays hidden while this is empty.
 var ZELLE_TO = "832-276-0334";
 var cart = [];
@@ -849,7 +860,7 @@ function openDetails(){
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
       .then(function(x){
         if(!x.ok){ $("cErr").textContent=x.j.error||"We can't deliver to that address."; return; }
-        $("cErr").textContent=""; DELIVERY_FEE=x.j.feeCents/100;
+        $("cErr").textContent=""; DELIVERY_FEE=x.j.feeCents/100; QUOTE={addr:a,token:x.j.quote||""};
         DIALS["cofee"]=money(DELIVERY_FEE).replace(/\d/g,"0"); dialSet($("coFee"),money(DELIVERY_FEE),"cofee");
         var m=document.querySelector('input[name="mode"]:checked');
         if(m&&m.value==="Delivery") dialSet($("coTotal"),money(total()+DELIVERY_FEE),"cototal");
@@ -1221,10 +1232,17 @@ function zelleStart(){
     busy=true; var b=$("zSent"); b.disabled=true; b.textContent="Sending your order..."; $("zErr").textContent="";
     (SES?token():Promise.resolve("")).then(function(t){
       var h={"Content-Type":"application/json"}; if(t) h.Authorization="Bearer "+t;
-      return fetch("/api/zelle",{method:"POST",headers:h,body:JSON.stringify({items:items,customer:d})});
+      return fetch("/api/zelle",{method:"POST",headers:h,body:JSON.stringify({items:items,customer:d,quote:(d.mode==="Delivery"&&QUOTE.addr===d.addr)?QUOTE.token:"",expected:cents(amt)})});
     })
-      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,j:j}; }); })
       .then(function(x){
+        if(x.st===409&&x.j&&x.j.totalCents!=null){
+          busy=false;
+          if(x.j.feeCents!=null) applyNewFee(x.j,d.addr);
+          $("zBack").onclick();
+          $("cErr").textContent=x.j.error;
+          return;
+        }
         if(!x.ok) throw new Error((x.j&&x.j.error)||"We could not send your order to Brenda. Please try again.");
         busy=false; cart=[]; save(); render(); recentFor=""; drawRecent();
         $("coBody").innerHTML='<h2 id="coH">Thank you!</h2><p>Brenda has your order. She will contact you once she sees your Zelle payment of '+money(amt)+'.</p><button class="btn" type="button" id="zDone">Done</button>';
@@ -1240,7 +1258,7 @@ function pay(){
   if(busy) return;
   var d=readDetails(); if(!d) return;
   busy=true; $("cGo").disabled=true; $("cGo").classList.add("loading"); $("cGo").textContent="Opening secure checkout..."; $("cErr").textContent="";
-  var payload={items:cart.map(function(l){return {id:l.id,qty:l.qty,opt:l.opt,note:l.note};}),customer:d};
+  var payload={items:cart.map(function(l){return {id:l.id,qty:l.qty,opt:l.opt,note:l.note};}),customer:d,quote:(d.mode==="Delivery"&&QUOTE.addr===d.addr)?QUOTE.token:"",expected:cents(total()+(d.mode==="Delivery"?DELIVERY_FEE:0))};
   var wasIn=!!SES;
   token().then(function(t){
     if(wasIn&&!t){ var ex=new Error("Your login expired. Please log in again or continue as guest."); ex.auth=true; throw ex; }
@@ -1250,6 +1268,7 @@ function pay(){
     .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,j:j}; }); })
     .then(function(x){
       if(x.ok && x.j.url){ saveLast(d); window.location.href=x.j.url; return; }
+      if(x.st===409&&x.j&&x.j.feeCents!=null) applyNewFee(x.j,d.addr);
       var er=new Error((x.j && x.j.error) || "We could not start checkout. Please try again."); er.auth=(x.st===401); throw er;
     })
     .catch(function(e){

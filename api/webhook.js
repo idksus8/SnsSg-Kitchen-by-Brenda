@@ -3,6 +3,7 @@ const { notify } = require("./_notify");
 const { buildText } = require("./_text");
 const { enabled, saveOrder } = require("./_supabase");
 const { dispatchLink } = require("./_uber");
+const { SHOP_NAME } = require("./_menu");
 
 async function rawBody(req) {
   const chunks = [];
@@ -48,7 +49,7 @@ module.exports = async (req, res) => {
       const md2 = session.metadata || {};
       const link = md2.mode === "Delivery" ? dispatchLink(process.env.SITE_URL || "https://" + req.headers.host, session.id) : "";
       const body = buildText(session, items.data, link);
-      const r = await notify("New paid order - SnsSg Kitchen", body);
+      const r = await notify("New paid order - " + SHOP_NAME, body);
       if (!r.sent) throw new Error("order alert not delivered (alerts set up: " + r.configured + ")");
     } catch (e) {
       console.error("notify error", e && e.message);

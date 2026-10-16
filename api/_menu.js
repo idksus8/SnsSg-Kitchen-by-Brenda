@@ -9,6 +9,9 @@ const MENU = {
   kisinia: { name: "Kisinia", cents: 3000, options: ["2 chapatis", "Fried cassava", "Fries"] },
 };
 
+// One place for the shop name used in texts, emails and the courier booking. Change it with SHOP_NAME in Vercel.
+const SHOP_NAME = process.env.SHOP_NAME || "test1";
+
 const DELIVERY_FEE_CENTS = 499;
 
 class UserError extends Error {}
@@ -60,4 +63,4 @@ function withDelivery(lines, mode, feeCents) {
   return lines.concat([{ label: "Delivery fee", qty: 1, unitCents: Number.isInteger(feeCents) ? feeCents : DELIVERY_FEE_CENTS }]);
 }
 
-module.exports = { MENU, UserError, priceOrder, validateCustomer, clean, withDelivery, DELIVERY_FEE_CENTS };
+module.exports = { SHOP_NAME, MENU, UserError, priceOrder, validateCustomer, clean, withDelivery, DELIVERY_FEE_CENTS };

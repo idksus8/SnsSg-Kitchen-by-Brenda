@@ -1,15 +1,26 @@
 const Stripe = require("stripe");
 const { enabled, bearer, userFromToken } = require("./_supabase");
 const { priceOrder, validateCustomer, withDelivery, UserError } = require("./_menu");
-const { deliveryFee } = require("./_uber");
+const { feeFor } = require("./_uber");
+const { limited, tooMany } = require("./_guard");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (limited(req, "checkout", 10, 10 * 60 * 1000)) return tooMany(res);
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
     const priced = priceOrder(body.items);
     const c = validateCustomer(body.customer);
-    const lines = withDelivery(priced.lines, c.mode, c.mode === "Delivery" ? await deliveryFee(c.addr) : 0);
+    const f = c.mode === "Delivery" ? await feeFor(c.addr, body.quote) : null;
+    const lines = withDelivery(priced.lines, c.mode, f ? f.feeCents : 0);
+    const total = lines.reduce((s, l) => s + l.unitCents * l.qty, 0);
+    // If the total the customer was shown is not what we are about to charge, tell them instead of charging a different amount.
+    if (Number.isInteger(body.expected) && body.expected !== total) {
+      return res.status(409).json(Object.assign({
+        error: "The total changed to $" + (total / 100).toFixed(2) + ". Please check it and try again.",
+        totalCents: total,
+      }, f ? { feeCents: f.feeCents, quote: f.quote } : {}));
+    }
 
     // Logged-in customers send their token; guests send none. A bad token is rejected, never treated as a guest.
     let user = null;

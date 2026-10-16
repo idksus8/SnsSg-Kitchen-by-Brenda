@@ -4,6 +4,7 @@
 //   Email (Resend):        RESEND_API_KEY, NOTIFY_EMAIL   (optional: EMAIL_FROM)
 //   Phone alert (ntfy):    NTFY_TOPIC
 const env = process.env;
+const { SHOP_NAME } = require("./_menu");
 
 const channels = [
   {
@@ -22,7 +23,7 @@ const channels = [
         method: "POST",
         headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: env.EMAIL_FROM || "SnsSg Kitchen <onboarding@resend.dev>",
+          from: env.EMAIL_FROM || SHOP_NAME + " <onboarding@resend.dev>",
           to: [env.NOTIFY_EMAIL],
           subject,
           text,

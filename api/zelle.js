@@ -2,20 +2,34 @@
 // The prices are re-checked on the server, just like card checkout. Nothing is charged here.
 const { notify } = require("./_notify");
 const { priceOrder, validateCustomer, withDelivery, UserError } = require("./_menu");
-const { deliveryFee } = require("./_uber");
-const { enabled, bearer, userFromToken, saveOrder } = require("./_supabase");
+const { feeFor } = require("./_uber");
+const { limited, tooMany } = require("./_guard");
+const { SHOP_NAME } = require("./_menu");
+const { enabled, bearer, userFromToken, saveOrder, countSince, findDuplicate } = require("./_supabase");
+
+// Most Zelle order alerts we will send in one hour, so a flood of fake orders cannot bury Brenda in texts.
+const MAX_ZELLE_PER_HOUR = 20;
 const crypto = require("crypto");
 
 function money(cents) { return "$" + (cents / 100).toFixed(2); }
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (limited(req, "zelle", 5, 10 * 60 * 1000)) return tooMany(res);
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
     const priced = priceOrder(body.items);
     const c = validateCustomer(body.customer);
-    const lines = withDelivery(priced.lines, c.mode, c.mode === "Delivery" ? await deliveryFee(c.addr) : 0);
+    const f = c.mode === "Delivery" ? await feeFor(c.addr, body.quote) : null;
+    const lines = withDelivery(priced.lines, c.mode, f ? f.feeCents : 0);
     const total = lines.reduce((s, l) => s + l.unitCents * l.qty, 0);
+    // The customer was told to send an exact amount. If our total is different, they must see the new one before paying.
+    if (Number.isInteger(body.expected) && body.expected !== total) {
+      return res.status(409).json(Object.assign({
+        error: "The total changed to $" + (total / 100).toFixed(2) + ". Please check it before you send payment.",
+        totalCents: total,
+      }, f ? { feeCents: f.feeCents, quote: f.quote } : {}));
+    }
 
     // Logged-in customers send their token so the order lands in their order history; guests send none.
     let user = null;
@@ -26,8 +40,21 @@ module.exports = async (req, res) => {
       if (!user && !down) return res.status(401).json({ error: "Your login expired. Please log in again or continue as guest." });
     }
 
+    if (enabled()) {
+      // Uses the order history. If it cannot be reached, orders still go through.
+      try {
+        if ((await countSince("zelle_*", new Date(Date.now() - 60 * 60 * 1000).toISOString())) >= MAX_ZELLE_PER_HOUR) {
+          return res.status(429).json({ error: "We are getting a lot of orders right now. Please text Brenda to place yours." });
+        }
+        // The same phone and total in the last 10 minutes is a double tap, not a new order: do not text Brenda twice.
+        if (await findDuplicate(c.phone, total, new Date(Date.now() - 10 * 60 * 1000).toISOString())) {
+          return res.status(200).json({ ok: true, totalCents: total, duplicate: true });
+        }
+      } catch (e) { console.error("zelle guard check failed, continuing", e && e.message); }
+    }
+
     const parts = [
-      "NEW ZELLE ORDER - SnsSg Kitchen by Brenda",
+      "NEW ZELLE ORDER - " + SHOP_NAME,
       "NOT CONFIRMED YET: check your Zelle for " + money(total) + " from " + c.name + " before you start.",
       "",
       lines.map((l) => l.qty + " x " + l.label + " - " + money(l.unitCents * l.qty)).join("\n"),
@@ -40,7 +67,7 @@ module.exports = async (req, res) => {
     parts.push("Phone: " + c.phone);
     if (c.note) parts.push("Notes: " + c.note);
 
-    const r = await notify("New Zelle order - SnsSg Kitchen", parts.join("\n").slice(0, 1500));
+    const r = await notify("New Zelle order - " + SHOP_NAME, parts.join("\n").slice(0, 1500));
     if (!r.sent) {
       console.error("zelle order not delivered: alerts set up = " + r.configured);
       return res.status(500).json({ error: "We could not send your order to Brenda. Please try again or contact her directly." });

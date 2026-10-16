@@ -1,7 +1,7 @@
 // Uber Direct courier: live delivery price at checkout, and booking the courier when Brenda says the food is ready.
 // Stays switched off (flat delivery fee, no courier booking) until every setting below is added in Vercel.
 const crypto = require("crypto");
-const { UserError, DELIVERY_FEE_CENTS } = require("./_menu");
+const { UserError, DELIVERY_FEE_CENTS, SHOP_NAME } = require("./_menu");
 
 const E = () => process.env;
 const enabled = () => !!(E().UBER_CLIENT_ID && E().UBER_CLIENT_SECRET && E().UBER_CUSTOMER_ID && E().PICKUP_ADDRESS && E().DISPATCH_SECRET);
@@ -57,7 +57,7 @@ async function createDelivery({ addr, name, phone: ph, items, ref }) {
   const q = await quote(addr);
   return call("/deliveries", {
     quote_id: q.id,
-    pickup_name: E().PICKUP_NAME || "SnsSg Kitchen",
+    pickup_name: E().PICKUP_NAME || SHOP_NAME,
     pickup_address: E().PICKUP_ADDRESS,
     pickup_phone_number: phone(E().OWNER_PHONE),
     dropoff_name: name,
@@ -72,4 +72,28 @@ const sign = (id) => crypto.createHmac("sha256", E().DISPATCH_SECRET || "x").upd
 const validToken = (id, t) => enabled() && !!t && t.length === 32 && crypto.timingSafeEqual(Buffer.from(sign(id)), Buffer.from(t));
 const dispatchLink = (origin, id) => (enabled() ? origin + "/api/dispatch?s=" + encodeURIComponent(id) + "&t=" + sign(id) : "");
 
-module.exports = { enabled, deliveryFee, createDelivery, validToken, dispatchLink };
+// ---- Locked delivery price ----
+// The price a customer was shown is signed, so checkout charges exactly that price for 15 minutes
+// instead of asking Uber again (Uber's price can change between asks).
+const QUOTE_MS = 15 * 60 * 1000;
+const secret = () => E().DISPATCH_SECRET || crypto.createHash("sha256").update("snssg|" + (E().STRIPE_SECRET_KEY || "x")).digest("hex");
+const qsig = (addr, fee, exp) => crypto.createHmac("sha256", secret()).update("quote|" + addr + "|" + fee + "|" + exp).digest("hex").slice(0, 32);
+const signQuote = (addr, fee) => { const exp = Date.now() + QUOTE_MS; return fee + "." + exp + "." + qsig(addr, fee, exp); };
+// Returns the locked fee in cents, or null if the token is missing, expired, or for a different address.
+function readQuote(addr, tok) {
+  const m = /^(\d{1,6})\.(\d{10,14})\.([0-9a-f]{32})$/.exec(String(tok || ""));
+  if (!m) return null;
+  const fee = +m[1], exp = +m[2];
+  if (exp < Date.now()) return null;
+  const want = Buffer.from(qsig(addr, fee, exp)), got = Buffer.from(m[3]);
+  return want.length === got.length && crypto.timingSafeEqual(want, got) ? fee : null;
+}
+// The fee to charge for this address: the locked price if the customer still has one, otherwise a fresh price.
+async function feeFor(addr, tok) {
+  const locked = readQuote(addr, tok);
+  if (locked !== null) return { feeCents: locked, quote: tok };
+  const feeCents = await deliveryFee(addr);
+  return { feeCents, quote: signQuote(addr, feeCents) };
+}
+
+module.exports = { enabled, deliveryFee, createDelivery, validToken, dispatchLink, signQuote, readQuote, feeFor };
