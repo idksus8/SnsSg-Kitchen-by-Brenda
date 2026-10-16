@@ -436,6 +436,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
   <div class="dlg-photo"><img id="iImg" alt=""></div>
   <div class="dlg-body">
     <div><h2 id="iName"></h2><p id="iDesc"></p></div>
+    <fieldset id="iFish" hidden><legend>What type of fish?</legend></fieldset>
     <fieldset id="iOpts" hidden><legend>Choose your side</legend></fieldset>
     <label class="f">Special instructions (optional)
       <textarea id="iNote" placeholder="For example: extra pepper, no onions"></textarea>
@@ -483,7 +484,8 @@ var MENU = [
   {id:"beef", cat:"soups", name:"Beef Soup", price:25, img:4, desc:"Beef on the bone with potato, corn and cabbage."},
   {id:"mtori", cat:"soups", name:"Beef Mtori (Green Banana Puree)", price:25, img:6, desc:"Creamy green banana puree with tender beef."},
   {id:"chapati", cat:"chapati", name:"Chapati", price:2.5, img:3, desc:"Soft, flaky, golden chapati. Priced each.", unit:"each"},
-  {id:"kisinia", cat:"fish", name:"Kisinia", price:30, img:5, desc:"Fried fish with tomato pepper sauce and shrimp, served with your choice of side.",
+  {id:"kisinia", cat:"fish", name:"Kisinia", price:20, img:5, desc:"Fried fish with tomato pepper sauce and shrimp, served with your choice of side. The price depends on the fish you pick.",
+    fish:{label:"What type of fish?", values:[{name:"Mackerel",price:20},{name:"Pompano",price:32},{name:"Drum fish",price:40},{name:"Tilapia",price:30}]},
     options:{label:"Choose your sides (pick one or more)", values:["2 chapatis","Fried cassava","Fries"]}}
 ];
 // Scrolling banner: built from the menu and repeated so it always fills the screen, even on wide monitors.
@@ -516,7 +518,9 @@ function money(n){return "$"+n.toFixed(2);}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
 function find(id){return MENU.filter(function(m){return m.id===id;})[0];}
 function save(){ try{localStorage.setItem("snssg-cart",JSON.stringify(cart));}catch(e){} }
-function total(){return cart.reduce(function(s,l){return s+find(l.id).price*l.qty;},0);}
+// Price of one of a cart line. Dishes with a choice of fish are priced by the fish picked (Mackerel if none is set).
+function unitPrice(l){ var m=find(l.id); if(!m.fish) return m.price; var f=m.fish.values.filter(function(v){return v.name===l.fish;})[0]||m.fish.values[0]; return f.price; }
+function total(){return cart.reduce(function(s,l){return s+unitPrice(l)*l.qty;},0);}
 function count(){return cart.reduce(function(s,l){return s+l.qty;},0);}
 
 // ---- Menu cards
@@ -580,6 +584,13 @@ function openItem(m){
   $("iImg").src=IMGS[m.img]; $("iImg").alt=m.name;
   $("iName").textContent=m.name; $("iDesc").textContent=m.desc;
   $("iNote").value="";
+  var ff=$("iFish");
+  if(m.fish){
+    ff.hidden=false;
+    ff.innerHTML='<legend>'+esc(m.fish.label)+'</legend>'+m.fish.values.map(function(v,i){
+      return '<label class="opt"><input type="radio" name="fish" value="'+esc(v.name)+'"'+(i===0?' checked':'')+'> '+esc(v.name)+' &middot; '+money(v.price)+'</label>';
+    }).join("");
+  } else { ff.hidden=true; ff.innerHTML=""; }
   var fs=$("iOpts");
   if(m.options){
     fs.hidden=false;
@@ -591,10 +602,16 @@ function openItem(m){
   $("itemDlg").showModal();
   refreshItem();
 }
+function curFish(){
+  if(!cur||!cur.fish) return null;
+  var r=document.querySelector('input[name="fish"]:checked'), nm=r?r.value:"";
+  return cur.fish.values.filter(function(v){return v.name===nm;})[0]||cur.fish.values[0];
+}
+$("iFish").onchange=function(){ refreshItem(); };
 function refreshItem(){
   dialSet($("iQty"),String(curQty),"iqty",false,true);
   if(!$("iPrice")) $("iAdd").innerHTML='Add to order <span class="dv" id="iPrice"></span>';
-  dialSet($("iPrice"),money(cur.price*curQty),"iprice",false,true);
+  dialSet($("iPrice"),money((cur.fish?curFish().price:cur.price)*curQty),"iprice",false,true);
 }
 $("iMinus").onclick=function(){ if(curQty>1){curQty--;refreshItem();} };
 $("iPlus").onclick=function(){ if(curQty<50){curQty++;refreshItem();} };
@@ -607,8 +624,9 @@ $("iAdd").onclick=function(){
     opt=cur.options.values.filter(function(v){return picked.indexOf(v)>-1;}).join(", ");
   }
   var note=$("iNote").value.trim();
-  var ex=cart.filter(function(l){return l.id===cur.id&&l.opt===opt&&l.note===note;})[0];
-  if(ex) ex.qty+=curQty; else cart.push({id:cur.id,opt:opt,note:note,qty:curQty});
+  var fish=cur.fish?curFish().name:"";
+  var ex=cart.filter(function(l){return l.id===cur.id&&l.opt===opt&&l.note===note&&(l.fish||"")===fish;})[0];
+  if(ex) ex.qty+=curQty; else cart.push({id:cur.id,fish:fish,opt:opt,note:note,qty:curQty});
   var fr=$("iImg").getBoundingClientRect(), fsrc=$("iImg").src;
   save(); render(); $("itemDlg").close(); toast("Added to your order: "+cur.name); fly(fr,fsrc);
 };
@@ -618,10 +636,11 @@ function linesHTML(){
   return '<ul class="lines">'+cart.map(function(l,i){
     var m=find(l.id);
     return '<li class="line"><div><div class="nm">'+esc(m.name)+'</div>'+
+      (l.fish?'<div class="sub">'+esc(l.fish)+'</div>':'')+
       (l.opt?'<div class="sub">'+esc(l.opt)+'</div>':'')+
       (l.note?'<div class="sub">Note: '+esc(l.note)+'</div>':'')+
       '<div class="qty"><button type="button" data-a="dec" data-i="'+i+'" aria-label="Remove one '+esc(m.name)+'">&minus;</button><span class="dv" data-k="lq'+i+'" data-t="'+l.qty+'"></span><button type="button" data-a="inc" data-i="'+i+'" aria-label="Add one '+esc(m.name)+'">+</button></div></div>'+
-      '<div class="pr"><span class="dv" data-k="lp'+i+'" data-t="'+money(m.price*l.qty)+'"></span></div></li>';
+      '<div class="pr"><span class="dv" data-k="lp'+i+'" data-t="'+money(unitPrice(l)*l.qty)+'"></span></div></li>';
   }).join("")+'</ul>';
 }
 function cartHTML(){
@@ -759,7 +778,7 @@ var pendingRemove=null;
 function askRemove(line){
   pendingRemove=line;
   var m=find(line.id);
-  $("cfMsg").textContent="Remove "+m.name+(line.opt?" ("+line.opt+")":"")+" from your order?";
+  $("cfMsg").textContent="Remove "+m.name+(line.fish?" - "+line.fish:"")+(line.opt?" ("+line.opt+")":"")+" from your order?";
   $("confirmDlg").showModal();
 }
 $("cfNo").onclick=function(){ pendingRemove=null; $("confirmDlg").close(); };
@@ -1098,6 +1117,11 @@ function reorder(id){
     if(!m){ skipped++; return; }
     var rest=label.slice(m.name.length), opt="", note="";
     var nm=/ - Note: ([\s\S]*)$/.exec(rest); if(nm){ note=nm[1].trim(); rest=rest.slice(0,nm.index); }
+    var fish="";
+    if(m.fish){
+      fish=m.fish.values[0].name;
+      m.fish.values.forEach(function(v){ if(rest.indexOf(" - "+v.name)===0){ fish=v.name; rest=rest.slice((" - "+v.name).length); } });
+    }
     if(m.options){
       var om=/^ \(([^)]*)\)/.exec(rest), got=om?om[1].split(", "):[];
       var okv=m.options.values.filter(function(v){ return got.indexOf(v)>-1; });
@@ -1105,8 +1129,8 @@ function reorder(id){
       opt=okv.join(", ");
     }
     var qty=Math.max(1,Math.min(50,+it.qty||1));
-    var ex=cart.filter(function(l){ return l.id===m.id&&l.opt===opt&&l.note===note; })[0];
-    if(ex) ex.qty=Math.min(50,ex.qty+qty); else cart.push({id:m.id,opt:opt,note:note,qty:qty});
+    var ex=cart.filter(function(l){ return l.id===m.id&&l.opt===opt&&l.note===note&&(l.fish||"")===fish; })[0];
+    if(ex) ex.qty=Math.min(50,ex.qty+qty); else cart.push({id:m.id,fish:fish,opt:opt,note:note,qty:qty});
     added++;
   });
   if(!added){ toast("Those items are no longer on the menu"); return; }
@@ -1167,7 +1191,7 @@ $("coX").onclick=function(){$("coDlg").close();};
 function saveLast(d){
   try{ localStorage.setItem("snssg-last",JSON.stringify({mode:d.mode,addr:d.addr,when:d.when,
     total:total()+(d.mode==="Delivery"?DELIVERY_FEE:0),
-    items:cart.map(function(l){ var m=find(l.id); return {n:m.name,q:l.qty,o:l.opt||"",note:l.note||"",p:m.price}; })})); }catch(e){}
+    items:cart.map(function(l){ var m=find(l.id); return {n:m.name,q:l.qty,o:[l.fish,l.opt].filter(Boolean).join(", "),note:l.note||"",p:unitPrice(l)}; })})); }catch(e){}
 }
 function lastHTML(){
   var o=null;
@@ -1239,7 +1263,7 @@ function zelleStart(){
 }
 function zelleShow(d){
   var amt=total()+(d.mode==="Delivery"?DELIVERY_FEE:0);
-  var items=cart.map(function(l){return {id:l.id,qty:l.qty,opt:l.opt,note:l.note};});
+  var items=cart.map(function(l){return {id:l.id,qty:l.qty,fish:l.fish||"",opt:l.opt,note:l.note};});
   $("coBody").innerHTML='<h2 id="coH">Pay with Zelle</h2>'+
     '<div class="sumbox"><div class="tot" style="border:0;margin:0;padding:0"><span>Send exactly</span><span>'+money(amt)+'</span></div>'+
     '<div class="sub" style="margin-top:8px">To Brenda on Zelle:</div>'+
@@ -1290,7 +1314,7 @@ function pay(){
   if(busy) return;
   var d=readDetails(); if(!d) return;
   busy=true; $("cGo").disabled=true; $("cGo").classList.add("loading"); $("cGo").textContent="Opening secure checkout..."; $("cErr").textContent="";
-  var payload={items:cart.map(function(l){return {id:l.id,qty:l.qty,opt:l.opt,note:l.note};}),customer:d,quote:(d.mode==="Delivery"&&QUOTE.addr===d.addr)?QUOTE.token:"",expected:cents(total()+(d.mode==="Delivery"?DELIVERY_FEE:0))};
+  var payload={items:cart.map(function(l){return {id:l.id,qty:l.qty,fish:l.fish||"",opt:l.opt,note:l.note};}),customer:d,quote:(d.mode==="Delivery"&&QUOTE.addr===d.addr)?QUOTE.token:"",expected:cents(total()+(d.mode==="Delivery"?DELIVERY_FEE:0))};
   var wasIn=!!SES;
   token().then(function(t){
     if(wasIn&&!t){ var ex=new Error("Your login expired. Please log in again or continue as guest."); ex.auth=true; throw ex; }

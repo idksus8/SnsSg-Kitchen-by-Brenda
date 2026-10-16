@@ -6,7 +6,11 @@ const MENU = {
   beef: { name: "Beef Soup", cents: 2500 },
   mtori: { name: "Beef Mtori (Green Banana Puree)", cents: 2500 },
   chapati: { name: "Chapati", cents: 250 },
-  kisinia: { name: "Kisinia", cents: 3000, options: ["2 chapatis", "Fried cassava", "Fries"] },
+  // Kisinia is priced by the fish picked; the first one (Mackerel) is the default.
+  kisinia: {
+    name: "Kisinia", cents: 2000, options: ["2 chapatis", "Fried cassava", "Fries"],
+    fish: [{ name: "Mackerel", cents: 2000 }, { name: "Pompano", cents: 3200 }, { name: "Drum fish", cents: 4000 }, { name: "Tilapia", cents: 3000 }],
+  },
 };
 
 // One place for the shop name used in texts, emails and the courier booking. Change it with SHOP_NAME in Vercel.
@@ -28,6 +32,14 @@ function priceOrder(items) {
     if (!m) throw new UserError("One of the items is no longer on the menu. Please refresh the page.");
     const qty = Number(it.qty);
     if (!Number.isInteger(qty) || qty < 1 || qty > 50) throw new UserError("Please check the quantities in your order.");
+    // Dishes sold by type of fish: the fish picked sets the price. A missing choice means the first (default) fish.
+    let fishName = "", unitCents = m.cents;
+    if (m.fish) {
+      const want = clean(it.fish, 40);
+      const f = want ? m.fish.find((x) => x.name === want) : m.fish[0];
+      if (!f) throw new UserError("Please choose a type of fish for " + m.name + ".");
+      fishName = f.name; unitCents = f.cents;
+    }
     let opt = "";
     if (m.options) {
       // Customers can pick one or more sides, sent as "A, B". Each must be on the menu; rebuilt in menu order.
@@ -36,8 +48,8 @@ function priceOrder(items) {
       opt = m.options.filter((x) => picked.includes(x)).join(", ");
     }
     const note = clean(it.note, 120);
-    let label = m.name + (opt ? " (" + opt + ")" : "") + (note ? " - Note: " + note : "");
-    return { label: label.slice(0, 240), qty, unitCents: m.cents };
+    let label = m.name + (fishName ? " - " + fishName : "") + (opt ? " (" + opt + ")" : "") + (note ? " - Note: " + note : "");
+    return { label: label.slice(0, 240), qty, unitCents };
   });
   const subtotalCents = lines.reduce((s, l) => s + l.unitCents * l.qty, 0);
   return { lines, subtotalCents };
