@@ -827,7 +827,7 @@ function openDetails(){
   $("coBody").innerHTML=
    '<h2 id="coH">Your details</h2>'+whoHTML()+
    '<label class="f">Name<input type="text" id="cName" autocomplete="name"></label>'+
-   '<label class="f">Phone<input type="tel" id="cPhone" autocomplete="tel"></label>'+
+   '<label class="f">Phone<input type="tel" id="cPhone" autocomplete="tel" placeholder="713-555-0123"></label>'+
    '<div class="seg" role="radiogroup" aria-label="Pickup or delivery"><label><input type="radio" name="mode" value="Pickup" checked> Pickup</label><label><input type="radio" name="mode" value="Delivery"> Delivery</label></div>'+
    '<div class="collapse" id="addrWrap" inert><div><label class="f">Delivery address<input type="text" id="cAddr" autocomplete="street-address" placeholder="Street, city, state ZIP"></label></div></div>'+
    '<div class="fw"><span id="whenLbl">When do you want it?</span><div class="seg" role="radiogroup" aria-labelledby="whenLbl"><label><input type="radio" name="when" value="ASAP" checked> ASAP</label><label><input type="radio" name="when" value="Schedule"> Schedule</label></div></div>'+

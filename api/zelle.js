@@ -4,6 +4,7 @@ const { notify } = require("./_notify");
 const { priceOrder, validateCustomer, withDelivery, UserError } = require("./_menu");
 const { feeFor } = require("./_uber");
 const { limited, tooMany } = require("./_guard");
+const { verifyPhone } = require("./_phone");
 const { SHOP_NAME } = require("./_menu");
 const { enabled, bearer, userFromToken, saveOrder, countSince, findDuplicate } = require("./_supabase");
 
@@ -20,6 +21,7 @@ module.exports = async (req, res) => {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
     const priced = priceOrder(body.items);
     const c = validateCustomer(body.customer);
+    await verifyPhone(c.phone);
     const f = c.mode === "Delivery" ? await feeFor(c.addr, body.quote) : null;
     const lines = withDelivery(priced.lines, c.mode, f ? f.feeCents : 0);
     const total = lines.reduce((s, l) => s + l.unitCents * l.qty, 0);
