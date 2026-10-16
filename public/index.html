@@ -306,10 +306,26 @@ dialog[open]::backdrop{animation:fade .25s ease}
 .ords-wrap .ords{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 6px;scrollbar-width:none}
 .ords-wrap .ords::-webkit-scrollbar{display:none}
 .ords-wrap .ord{flex:0 0 min(300px,82%);scroll-snap-align:start;align-content:start}
-.ords-arr{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:42px;height:42px;border-radius:50%;border:0;background:var(--saffron);color:#1A1405;font-size:1.7rem;line-height:1;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:pointer;padding:0 0 3px}
+.ords-arr{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:58px;height:44px;border-radius:999px;border:0;background:var(--saffron);color:#1A1405;font-size:1.9rem;line-height:1;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:pointer;padding:0;display:grid;place-items:center;transition:transform .18s ease,box-shadow .18s ease,opacity .2s ease;animation:arrIn .45s cubic-bezier(.3,1.5,.5,1) both}
+.ords-arr[hidden]{display:none}
+.ords-arr span{display:block;margin-top:-4px}
+#ordPrev span{animation:nudgeL 1.6s ease-in-out infinite}
+#ordNext span{animation:nudgeR 1.6s ease-in-out infinite}
+.ords-arr:hover:not(:disabled){transform:translateY(-50%) scale(1.1);box-shadow:0 4px 14px rgba(0,0,0,.35)}
+#ordPrev:hover:not(:disabled) span{animation:none;transform:translateX(-4px)}
+#ordNext:hover:not(:disabled) span{animation:none;transform:translateX(4px)}
+.ords-arr:active:not(:disabled){transform:translateY(-50%) scale(.92)}
 .ords-arr:disabled{opacity:.3;cursor:default}
-#ordPrev{left:-12px}
-#ordNext{right:-12px}
+.ords-arr:disabled span{animation:none}
+.ords-arr:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+#ordPrev{left:-18px}
+#ordNext{right:-18px}
+@media (min-width:901px){#ordNext{right:-26px}}
+@media (min-width:1240px){#ordPrev{left:-44px}}
+@keyframes arrIn{from{opacity:0;transform:translateY(-50%) scale(.5)}to{opacity:1;transform:translateY(-50%) scale(1)}}
+@keyframes nudgeL{0%,100%{transform:translateX(0)}50%{transform:translateX(-5px)}}
+@keyframes nudgeR{0%,100%{transform:translateX(0)}50%{transform:translateX(5px)}}
+@media (prefers-reduced-motion: reduce){.ords-arr,.ords-arr span{animation:none!important;transition:none}}
 .ord .sub{color:var(--muted);font-size:.88rem}
 </style>
 </head>
@@ -973,7 +989,7 @@ function showOrders(list){
   var el=$("ordList");
   list.forEach(function(o){ ORDERS[o.id]=o; });
   if(!list.length){ el.innerHTML='<p class="empty" style="padding:8px 0">No orders yet. Orders you place while logged in will show up here.</p>'; return; }
-  el.innerHTML='<div class="ords-wrap"><button class="ords-arr" type="button" id="ordPrev" aria-label="Earlier orders">&#8249;</button><ul class="ords" id="ordTrack">'+list.map(ordHTML).join("")+'</ul><button class="ords-arr" type="button" id="ordNext" aria-label="Older orders">&#8250;</button></div>';
+  el.innerHTML='<div class="ords-wrap"><button class="ords-arr" type="button" id="ordPrev" aria-label="Earlier orders"><span>&#8249;</span></button><ul class="ords" id="ordTrack">'+list.map(ordHTML).join("")+'</ul><button class="ords-arr" type="button" id="ordNext" aria-label="Older orders"><span>&#8250;</span></button></div>';
   var tr=$("ordTrack"), pv=$("ordPrev"), nx=$("ordNext");
   function upd(){
     var any=tr.scrollWidth>tr.clientWidth+2;
