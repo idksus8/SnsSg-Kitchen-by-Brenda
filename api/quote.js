@@ -2,6 +2,7 @@
 const { UserError } = require("./_menu");
 const { deliveryFee, signQuote } = require("./_uber");
 const { limited, tooMany } = require("./_guard");
+const { verifyAddress } = require("./_places");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -10,6 +11,7 @@ module.exports = async (req, res) => {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
     const addr = String(body.addr || "").replace(/[\u0000-\u001f]+/g, " ").trim().slice(0, 200);
     if (!addr) throw new UserError("Enter your delivery address.");
+    await verifyAddress(addr);
     const feeCents = await deliveryFee(addr);
     return res.status(200).json({ feeCents, quote: signQuote(addr, feeCents) });
   } catch (e) {
