@@ -300,7 +300,16 @@ dialog[open]::backdrop{animation:fade .25s ease}
 .ords{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .ord{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:6px}
 .ord ul{margin:0;padding-left:18px}
-.ord .re{width:auto;justify-self:start;padding:8px 18px;font-size:.92rem;margin-top:2px}
+.ord .btn.re{width:auto;justify-self:start;padding:9px 20px;font-size:.92rem;margin-top:2px;background:var(--saffron);color:#1A1405;border:0;font-weight:800}
+.ord .btn.re:hover{filter:brightness(1.07)}
+.ords-wrap{position:relative}
+.ords-wrap .ords{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 6px;scrollbar-width:none}
+.ords-wrap .ords::-webkit-scrollbar{display:none}
+.ords-wrap .ord{flex:0 0 min(300px,82%);scroll-snap-align:start;align-content:start}
+.ords-arr{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:42px;height:42px;border-radius:50%;border:0;background:var(--saffron);color:#1A1405;font-size:1.7rem;line-height:1;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:pointer;padding:0 0 3px}
+.ords-arr:disabled{opacity:.3;cursor:default}
+#ordPrev{left:-12px}
+#ordNext{right:-12px}
 .ord .sub{color:var(--muted);font-size:.88rem}
 </style>
 </head>
@@ -961,15 +970,23 @@ function ordHTML(o){
 var recentFor="";
 var ORDERS={};
 function showOrders(list){
-  var el=$("ordList"), all=false;
+  var el=$("ordList");
   list.forEach(function(o){ ORDERS[o.id]=o; });
   if(!list.length){ el.innerHTML='<p class="empty" style="padding:8px 0">No orders yet. Orders you place while logged in will show up here.</p>'; return; }
-  function paint(){
-    el.innerHTML='<ul class="ords">'+(all?list:list.slice(0,3)).map(ordHTML).join("")+'</ul>'+
-      (list.length>3?'<p style="margin:10px 0 0"><button class="lnk" type="button" id="ordMore">'+(all?"Show fewer":"Show all "+list.length+" orders")+'</button></p>':"");
-    if($("ordMore")) $("ordMore").onclick=function(){ all=!all; paint(); };
+  el.innerHTML='<div class="ords-wrap"><button class="ords-arr" type="button" id="ordPrev" aria-label="Earlier orders">&#8249;</button><ul class="ords" id="ordTrack">'+list.map(ordHTML).join("")+'</ul><button class="ords-arr" type="button" id="ordNext" aria-label="Older orders">&#8250;</button></div>';
+  var tr=$("ordTrack"), pv=$("ordPrev"), nx=$("ordNext");
+  function upd(){
+    var any=tr.scrollWidth>tr.clientWidth+2;
+    pv.hidden=nx.hidden=!any;
+    pv.disabled=tr.scrollLeft<=2;
+    nx.disabled=tr.scrollLeft+tr.clientWidth>=tr.scrollWidth-2;
   }
-  paint();
+  function step(d){ var c=tr.querySelector(".ord"); tr.scrollBy({left:d*(c?c.offsetWidth+12:300),behavior:"smooth"}); }
+  pv.onclick=function(){ step(-1); };
+  nx.onclick=function(){ step(1); };
+  tr.addEventListener("scroll",upd);
+  window.addEventListener("resize",upd);
+  setTimeout(upd,60);
 }
 function drawRecent(){
   var sec=$("recent"); if(!sec) return;
