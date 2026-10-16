@@ -1212,9 +1212,17 @@ function zelleStart(){
   fetch("/api/checkphone",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:d.phone})})
     .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
     .then(function(x){
-      back();
-      if(!x.ok){ $("cErr").textContent=(x.j&&x.j.error)||"Please enter a real phone number Brenda can reach."; $("cPhone").focus(); return; }
-      zelleShow(d);
+      if(!x.ok){ back(); $("cErr").textContent=(x.j&&x.j.error)||"Please enter a real phone number Brenda can reach."; $("cPhone").focus(); return; }
+      if(d.mode!=="Delivery"){ back(); zelleShow(d); return; }
+      // Delivery: check the address is real and lock today's delivery price now, so the amount shown below is the amount Brenda expects.
+      return fetch("/api/quote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({addr:d.addr})})
+        .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
+        .then(function(q){
+          back();
+          if(!q.ok){ $("cErr").textContent=(q.j&&q.j.error)||"We couldn't find that address. Please check it."; $("cAddr").focus(); return; }
+          applyNewFee(q.j,d.addr);
+          zelleShow(d);
+        });
     })
     .catch(function(){ back(); zelleShow(d); });
 }

@@ -46,10 +46,16 @@ async function lookup(addr) {
   return j.result.addressMatches.length > 0;
 }
 
+// Instant offline check (no lookup): rules out empty, too-short and number-less text like "asdf" or "Houston".
+function looksLikeAddress(addr) {
+  const q = forLookup(String(addr || ""));
+  if (q.length < 6 || !/\d/.test(q) || !/[a-z]/i.test(q)) throw new UserError(NOT_FOUND);
+  return q;
+}
+
 // Throws a UserError the customer can read if the address is not real. Returns quietly otherwise.
 async function verifyAddress(addr) {
-  const q = forLookup(String(addr || ""));
-  if (q.length < 6 || !/\d/.test(q)) throw new UserError(NOT_FOUND);
+  const q = looksLikeAddress(addr);
   const hit = cache.get(q.toLowerCase());
   if (hit && Date.now() - hit.t < CACHE_MS) {
     if (!hit.ok) throw new UserError(NOT_FOUND);
@@ -67,4 +73,4 @@ async function verifyAddress(addr) {
   if (!ok) throw new UserError(NOT_FOUND);
 }
 
-module.exports = { verifyAddress, forLookup };
+module.exports = { verifyAddress, looksLikeAddress, forLookup };

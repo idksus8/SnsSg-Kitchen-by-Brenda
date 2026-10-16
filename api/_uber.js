@@ -2,7 +2,7 @@
 // Stays switched off (flat delivery fee, no courier booking) until every setting below is added in Vercel.
 const crypto = require("crypto");
 const { UserError, DELIVERY_FEE_CENTS, SHOP_NAME } = require("./_menu");
-const { verifyAddress } = require("./_geocode");
+const { verifyAddress, looksLikeAddress } = require("./_geocode");
 
 const E = () => process.env;
 const enabled = () => !!(E().UBER_CLIENT_ID && E().UBER_CLIENT_SECRET && E().UBER_CUSTOMER_ID && E().PICKUP_ADDRESS && E().DISPATCH_SECRET);
@@ -42,9 +42,11 @@ async function quote(addr) {
 }
 
 // What the customer pays for delivery, in cents.
-async function deliveryFee(addr) {
+async function deliveryFee(addr, opts) {
   // Every price (quote, card checkout, Zelle) comes through here, so a made-up address is stopped before it is priced, even with Uber switched off.
-  await verifyAddress(addr);
+  // opts.lookup === false skips the address lookup (only the instant offline check runs): used when a customer taps "I sent the payment".
+  if (opts && opts.lookup === false) looksLikeAddress(addr);
+  else await verifyAddress(addr);
   if (!enabled()) return DELIVERY_FEE_CENTS;
   const q = await quote(addr);
   if (!Number.isInteger(q.fee)) throw new Error("uber quote had no fee");
@@ -92,10 +94,10 @@ function readQuote(addr, tok) {
   return want.length === got.length && crypto.timingSafeEqual(want, got) ? fee : null;
 }
 // The fee to charge for this address: the locked price if the customer still has one, otherwise a fresh price.
-async function feeFor(addr, tok) {
+async function feeFor(addr, tok, opts) {
   const locked = readQuote(addr, tok);
   if (locked !== null) return { feeCents: locked, quote: tok };
-  const feeCents = await deliveryFee(addr);
+  const feeCents = await deliveryFee(addr, opts);
   return { feeCents, quote: signQuote(addr, feeCents) };
 }
 

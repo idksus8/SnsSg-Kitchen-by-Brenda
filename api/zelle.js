@@ -22,7 +22,8 @@ module.exports = async (req, res) => {
     const priced = priceOrder(body.items);
     const c = validateCustomer(body.customer);
     normalizePhone(c.phone); // instant format-only backstop (no lookup); the real check already ran when the customer tapped Pay with Zelle
-    const f = c.mode === "Delivery" ? await feeFor(c.addr, body.quote) : null;
+    // The address was already checked and priced when the customer tapped Pay with Zelle, so no lookup happens here.
+    const f = c.mode === "Delivery" ? await feeFor(c.addr, body.quote, { lookup: false }) : null;
     const lines = withDelivery(priced.lines, c.mode, f ? f.feeCents : 0);
     const total = lines.reduce((s, l) => s + l.unitCents * l.qty, 0);
     // The customer was told to send an exact amount. If our total is different, they must see the new one before paying.
