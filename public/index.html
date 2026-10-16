@@ -90,6 +90,8 @@ img{max-width:100%;display:block}
 .fine{padding:0 16px 12px;color:var(--muted);font-size:.82rem}
 .btn{display:block;width:100%;border:0;border-radius:10px;background:var(--btn);color:var(--btn-text);font-weight:700;padding:13px 16px;cursor:pointer;text-align:center;text-decoration:none}
 .btn.alt{background:var(--surface);color:var(--text);border:1px solid var(--line)}
+.btn.danger{background:#C8102E;color:#fff;border:1px solid #C8102E}
+.btn.danger:hover{background:#A30D26;border-color:#A30D26}
 .btn[disabled]{opacity:.45;cursor:not-allowed}
 .side .btn{margin:0 16px 16px;width:calc(100% - 32px)}
 
@@ -944,7 +946,7 @@ function ordHTML(o){
   var items=(o.items||[]).map(function(i){ return '<li>'+(+i.qty||1)+' &times; '+esc(i.label)+'</li>'; }).join("");
   return '<li class="ord"><div class="row"><strong>'+esc(fmtDay(new Date(o.created_at),false))+'</strong><strong>'+money(o.total_cents/100)+'</strong></div>'+
     '<div class="sub">Order #'+esc(String(o.id).slice(0,8).toUpperCase())+' &middot; '+esc(o.mode||"Pickup")+(o.mode==="Delivery"&&o.addr?': '+esc(o.addr):'')+(o.when_text&&o.when_text!=="ASAP"?' &middot; '+esc(o.when_text):'')+'</div>'+
-    '<ul>'+items+'</ul>'+(o.note?'<div class="sub">Note: '+esc(o.note)+'</div>':'')+'</li>';
+    (String(o.stripe_session_id||"").indexOf("zelle_")===0?'<div class="sub">Paid with Zelle. Brenda confirms once she sees your payment.</div>':'')+'<ul>'+items+'</ul>'+(o.note?'<div class="sub">Note: '+esc(o.note)+'</div>':'')+'</li>';
 }
 // Recent orders live on the main page for logged-in customers.
 var recentFor="";
@@ -984,7 +986,7 @@ function acctView(){
   box.innerHTML='<h2>Your account</h2><p class="fine" style="padding:0">Signed in as <strong>'+esc(SES.user.email||"")+'</strong></p>'+
     '<button class="btn alt" type="button" id="aOrders">View recent orders</button>'+
     '<button class="btn alt" type="button" id="aPw">Change password</button>'+
-    '<button class="btn alt" type="button" id="aOut">Log out</button>';
+    '<button class="btn danger" type="button" id="aOut">Log out</button>';
   $("aOrders").onclick=function(){ $("acctDlg").close(); drawRecent(); $("recent").scrollIntoView({behavior:"smooth",block:"start"}); };
   $("aPw").onclick=pwView;
   $("aOut").onclick=function(){ logout().then(function(){ $("acctDlg").close(); toast("You are logged out"); }); };
@@ -1140,11 +1142,14 @@ function zelleStart(){
   $("zSent").onclick=function(){
     if(busy) return;
     busy=true; var b=$("zSent"); b.disabled=true; b.textContent="Sending your order..."; $("zErr").textContent="";
-    fetch("/api/zelle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items:items,customer:d})})
+    (SES?token():Promise.resolve("")).then(function(t){
+      var h={"Content-Type":"application/json"}; if(t) h.Authorization="Bearer "+t;
+      return fetch("/api/zelle",{method:"POST",headers:h,body:JSON.stringify({items:items,customer:d})});
+    })
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
       .then(function(x){
         if(!x.ok) throw new Error((x.j&&x.j.error)||"We could not send your order to Brenda. Please try again.");
-        busy=false; cart=[]; save(); render();
+        busy=false; cart=[]; save(); render(); recentFor=""; drawRecent();
         $("coBody").innerHTML='<h2 id="coH">Thank you!</h2><p>Brenda has your order. She will contact you once she sees your Zelle payment of '+money(amt)+'.</p><button class="btn" type="button" id="zDone">Done</button>';
         $("zDone").onclick=function(){ $("coDlg").close(); };
         setTimeout(confetti,450);
