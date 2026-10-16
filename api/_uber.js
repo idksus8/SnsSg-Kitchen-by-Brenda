@@ -2,6 +2,7 @@
 // Stays switched off (flat delivery fee, no courier booking) until every setting below is added in Vercel.
 const crypto = require("crypto");
 const { UserError, DELIVERY_FEE_CENTS, SHOP_NAME } = require("./_menu");
+const { verifyAddress } = require("./_geocode");
 
 const E = () => process.env;
 const enabled = () => !!(E().UBER_CLIENT_ID && E().UBER_CLIENT_SECRET && E().UBER_CUSTOMER_ID && E().PICKUP_ADDRESS && E().DISPATCH_SECRET);
@@ -42,6 +43,8 @@ async function quote(addr) {
 
 // What the customer pays for delivery, in cents.
 async function deliveryFee(addr) {
+  // Every price (quote, card checkout, Zelle) comes through here, so a made-up address is stopped before it is priced, even with Uber switched off.
+  await verifyAddress(addr);
   if (!enabled()) return DELIVERY_FEE_CENTS;
   const q = await quote(addr);
   if (!Number.isInteger(q.fee)) throw new Error("uber quote had no fee");
