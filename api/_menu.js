@@ -66,6 +66,11 @@ function validateCustomer(c) {
   if (!name) throw new UserError("Enter your name.");
   if (phone.replace(/\D/g, "").length < 7) throw new UserError("Enter a phone number Brenda can reach.");
   if (mode === "Delivery" && !addr) throw new UserError("Enter your delivery address.");
+  // Brenda cooks Friday, Saturday and Sunday only, so the day the customer picked (YYYY-MM-DD) must be one of those.
+  const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean(c.whenDate, 10));
+  const dt = dm ? new Date(Date.UTC(+dm[1], +dm[2] - 1, +dm[3])) : null;
+  const dow = dt && dt.getUTCMonth() === +dm[2] - 1 ? dt.getUTCDay() : -1;
+  if (![5, 6, 0].includes(dow)) throw new UserError("Brenda takes orders for Friday, Saturday and Sunday only. Please refresh the page and choose one of those days.");
   return { name, phone, mode, addr, when, note };
 }
 

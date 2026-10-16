@@ -248,7 +248,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
 #intro .in-name{font-size:clamp(2.2rem,9vw,4.4rem);font-weight:800;letter-spacing:-.01em;line-height:1.05;animation:introIn .8s cubic-bezier(.2,.8,.2,1) .15s both}
 #intro .in-line{height:3px;background:#F0A91F;margin:16px auto;width:0;border-radius:3px;animation:introLine .7s ease .45s forwards}
 #intro .in-by{font-size:clamp(1.1rem,4vw,1.6rem);font-weight:700;color:#FFFFFF;animation:introIn .7s ease .6s both}
-#intro .in-tag{margin-top:8px;font-size:.95rem;letter-spacing:.14em;text-transform:uppercase;color:#cfd8d2;animation:introIn .7s ease .85s both}
+#intro .in-tag{margin-top:8px;text-align:center;font-size:clamp(.7rem,3.2vw,.95rem);letter-spacing:.14em;text-transform:uppercase;color:#cfd8d2;animation:introIn .7s ease .85s both}
 @keyframes introIn{from{opacity:0;transform:translateY(18px) scale(.95)}to{opacity:1;transform:none}}
 @keyframes introLine{to{width:min(220px,50vw)}}
 @keyframes introMid{to{opacity:0;transform:scale(1.06)}}
@@ -332,7 +332,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
 </style>
 </head>
 <body>
-<div id="intro" aria-hidden="true"><div class="in-half in-top"></div><div class="in-half in-bot"></div><div class="in-mid"><div class="in-name">SnsSg Kitchen</div><div class="in-line"></div><div class="in-by">by Brenda</div><div class="in-tag">Homemade &middot; cooked to order</div></div></div>
+<div id="intro" aria-hidden="true"><div class="in-half in-top"></div><div class="in-half in-bot"></div><div class="in-mid"><div class="in-name">SnsSg Kitchen</div><div class="in-line"></div><div class="in-by">by Brenda</div><div class="in-tag">Authentic Flavor Made with Love</div></div></div>
 <script>
 (function(){
   var el=document.getElementById("intro"); if(!el) return;
@@ -812,6 +812,7 @@ function calInit(){
   var n=new Date();
   cal.today=new Date(n.getFullYear(),n.getMonth(),n.getDate());
   cal.y=n.getFullYear(); cal.m=n.getMonth(); cal.sel="";
+  $("calSum").textContent="Brenda takes orders for Friday, Saturday and Sunday only.";
   renderCal(0);
   $("cal").addEventListener("click",function(e){
     var b=e.target.closest("button"); if(!b||b.disabled) return;
@@ -837,10 +838,20 @@ function renderCal(dir){
   for(var d=1;d<=dim;d++){
     var dt=new Date(cal.y,cal.m,d), id=ymd(cal.y,cal.m,d);
     var cls=(id===cal.sel?"sel ":"")+(dt.getTime()===cal.today.getTime()?"today":"");
-    h+='<button type="button" data-d="'+id+'" class="'+cls+'"'+(dt<cal.today?" disabled":"")+' aria-label="'+fmtDay(dt,true)+'">'+d+'</button>';
+    h+='<button type="button" data-d="'+id+'" class="'+cls+'"'+(dt<cal.today||COOK_DAYS.indexOf(dt.getDay())<0?" disabled":"")+' aria-label="'+fmtDay(dt,true)+'">'+d+'</button>';
   }
   h+='</div>';
   $("cal").innerHTML=h;
+}
+// Brenda cooks Friday, Saturday and Sunday only. Each day button is the next such day (today counts), with the date shown so it is clear which one.
+var COOK_DAYS=[5,6,0], DAY_NAMES=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+function nextDay(dow){ var n=new Date(), t=new Date(n.getFullYear(),n.getMonth(),n.getDate()); t.setDate(t.getDate()+((dow-t.getDay()+7)%7)); return t; }
+function fmtLong(dt){ return new Intl.DateTimeFormat("en-US",{weekday:"long",month:"short",day:"numeric",year:"numeric"}).format(dt); }
+function dayRadios(){
+  return [5,6,0].map(function(dow){
+    var dt=nextDay(dow), id=ymd(dt.getFullYear(),dt.getMonth(),dt.getDate());
+    return '<label><input type="radio" name="when" value="'+DAY_NAMES[dow]+'" data-date="'+id+'"> <span>'+DAY_NAMES[dow]+'<small style="display:block;color:var(--muted)">'+new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric"}).format(dt)+'</small></span></label>';
+  }).join("");
 }
 function openDetails(){
   $("coBody").innerHTML=
@@ -849,7 +860,7 @@ function openDetails(){
    '<label class="f">Phone<input type="tel" id="cPhone" autocomplete="tel" placeholder="713-555-0123"></label>'+
    '<div class="seg" role="radiogroup" aria-label="Pickup or delivery"><label><input type="radio" name="mode" value="Pickup" checked> Pickup</label><label><input type="radio" name="mode" value="Delivery"> Delivery</label></div>'+
    '<div class="collapse" id="addrWrap" inert><div style="display:grid;gap:14px"><label class="f">Delivery address<input type="text" id="cAddr" autocomplete="address-line1" placeholder="Street address (add Apt or Unit if you have one)"></label><div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px"><label class="f">City<input type="text" id="cCity" autocomplete="address-level2"></label><label class="f">ZIP code<input type="text" id="cZip" autocomplete="postal-code" inputmode="numeric" maxlength="10"></label></div></div></div>'+
-   '<div class="fw"><span id="whenLbl">When do you want it?</span><div class="seg" role="radiogroup" aria-labelledby="whenLbl"><label><input type="radio" name="when" value="ASAP" checked> ASAP</label><label><input type="radio" name="when" value="Schedule"> Schedule</label></div></div>'+
+   '<div class="fw"><span id="whenLbl">When do you want it?</span><div class="seg" role="radiogroup" aria-labelledby="whenLbl">'+dayRadios()+'<label><input type="radio" name="when" value="Schedule"> Schedule</label></div></div>'+
    '<div class="collapse" id="schedWrap" inert><div class="sched-in"><div class="cal" id="cal"></div><label class="f">Time<input type="time" id="cTime" step="900"></label><p class="calsum" id="calSum" aria-live="polite"></p></div></div>'+
    '<label class="f">Notes for Brenda (optional)<textarea id="cNote"></textarea></label>'+
    '<div class="row"><span>Subtotal</span><span class="dv" data-k="sub" data-t="'+money(total())+'"></span></div>'+
@@ -1215,7 +1226,7 @@ function readDetails(){
   var d={
     name:$("cName").value.trim(), phone:$("cPhone").value.trim(),
     mode:document.querySelector('input[name="mode"]:checked').value,
-    addr:"", when:"ASAP", note:$("cNote").value.trim()
+    addr:"", when:"", note:$("cNote").value.trim()
   };
   if(!d.name){ $("cErr").textContent="Enter your name."; $("cName").focus(); return null; }
   if(d.phone.replace(/\D/g,"").length<7){ $("cErr").textContent="Enter a phone number Brenda can reach."; $("cPhone").focus(); return null; }
@@ -1226,14 +1237,20 @@ function readDetails(){
     if(!ZIP_RE.test(p.zip)){ $("cErr").textContent="Enter a 5-digit ZIP code."; $("cZip").focus(); return null; }
     d.street=p.street; d.city=p.city; d.zip=p.zip; d.addr=addrNow();
   }
-  if(document.querySelector('input[name="when"]:checked').value==="Schedule"){
+  var w=document.querySelector('input[name="when"]:checked');
+  if(!w){ $("cErr").textContent="Choose Friday, Saturday or Sunday for your order."; return null; }
+  d.whenPick=w.value;
+  if(w.value==="Schedule"){
     var tv=$("cTime").value;
-    if(!cal.sel){ $("cErr").textContent="Pick a date on the calendar."; return null; }
+    if(!cal.sel){ $("cErr").textContent="Pick a Friday, Saturday or Sunday on the calendar."; return null; }
     if(!tv){ $("cErr").textContent="Pick a time."; $("cTime").focus(); return null; }
     var sd=parseYmd(cal.sel), tp=tv.split(":");
+    if(COOK_DAYS.indexOf(sd.getDay())<0){ $("cErr").textContent="Brenda takes orders for Friday, Saturday and Sunday only."; return null; }
     sd.setHours(+tp[0],+tp[1],0,0);
     if(sd<new Date()){ $("cErr").textContent="That time has already passed. Pick a later time."; return null; }
-    d.when=fmtDay(parseYmd(cal.sel),false)+" at "+fmtTime(tv);
+    d.when=fmtLong(parseYmd(cal.sel))+" at "+fmtTime(tv); d.whenDate=cal.sel; d.whenTime=tv;
+  } else {
+    d.when=fmtLong(parseYmd(w.getAttribute("data-date"))); d.whenDate=w.getAttribute("data-date");
   }
   return d;
 }
@@ -1281,6 +1298,9 @@ function zelleShow(d){
   $("zBack").onclick=function(){
     openDetails();
     $("cName").value=d.name; $("cPhone").value=d.phone; $("cNote").value=d.note;
+    var wr=document.querySelector('input[name="when"][value="'+d.whenPick+'"]');
+    if(wr){ wr.click();
+      if(d.whenPick==="Schedule"&&d.whenDate){ var sd0=parseYmd(d.whenDate); cal.sel=d.whenDate; cal.y=sd0.getFullYear(); cal.m=sd0.getMonth(); renderCal(0); $("calSum").textContent=fmtDay(sd0,true); $("cTime").value=d.whenTime||""; } }
     if(d.mode==="Delivery"){ document.querySelector('input[name="mode"][value="Delivery"]').click(); $("cAddr").value=d.street||d.addr; $("cCity").value=d.city||""; $("cZip").value=d.zip||""; }
   };
   $("zSent").onclick=function(){
