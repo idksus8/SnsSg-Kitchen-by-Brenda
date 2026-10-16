@@ -1,5 +1,5 @@
 const Stripe = require("stripe");
-const twilio = require("twilio");
+const { notify } = require("./_notify");
 const { buildText } = require("./_text");
 const { enabled, saveOrder } = require("./_supabase");
 const { dispatchLink } = require("./_uber");
@@ -48,8 +48,8 @@ module.exports = async (req, res) => {
       const md2 = session.metadata || {};
       const link = md2.mode === "Delivery" ? dispatchLink(process.env.SITE_URL || "https://" + req.headers.host, session.id) : "";
       const body = buildText(session, items.data, link);
-      const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-      await client.messages.create({ to: process.env.OWNER_PHONE, from: process.env.TWILIO_FROM, body });
+      const r = await notify("New paid order - SnsSg Kitchen", body);
+      if (!r.sent) throw new Error("order alert not delivered (alerts set up: " + r.configured + ")");
     } catch (e) {
       console.error("notify error", e && e.message);
       return res.status(500).json({ error: "notify failed" }); // Stripe will retry
