@@ -88,7 +88,10 @@ img{max-width:100%;display:block}
 @keyframes favGlow{0%,100%{box-shadow:0 0 0 0 rgba(255,198,26,0)}35%{box-shadow:0 0 0 5px rgba(255,198,26,.55)}}
 @keyframes favOut{to{opacity:0;transform:scale(.7) rotate(-4deg)}}
 @keyframes navBump{0%{transform:scale(1)}30%{transform:scale(1.3);background:#ffc61a;color:#1A1405}100%{transform:scale(1)}}
-@media (prefers-reduced-motion: reduce){.fav-new,.fav-new .item,.fav-out,.cats a.bump{animation:none}}
+#favs h2.head-in{width:fit-content;padding-bottom:4px;background-image:linear-gradient(#ffc61a,#ffc61a);background-repeat:no-repeat;background-position:0 100%;animation:favHead .7s cubic-bezier(.2,.9,.3,1.2) .1s both,favUnder 1.2s ease .5s both}
+@keyframes favHead{0%{opacity:0;transform:translateX(-34px) scale(.92)}100%{opacity:1;transform:none}}
+@keyframes favUnder{0%{background-size:0 3px}55%{background-size:100% 3px}100%{background-size:100% 0}}
+@media (prefers-reduced-motion: reduce){.fav-new,.fav-new .item,.fav-out,.cats a.bump,#favs h2.head-in{animation:none}}
 .fav:hover{transform:scale(1.12)}
 .fav:active{transform:scale(.9)}
 .fav:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
@@ -585,12 +588,34 @@ function paintFav(f){
 }
 var FAV_REDUCED=!!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches);
 var STAR_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.78 5.9 6.47.85-4.74 4.46 1.2 6.4L12 17.2l-5.71 3.2 1.2-6.4L2.75 9.55l6.47-.85z"/></svg>';
-function syncFavs(newId){
+var favRaf=0;
+// Grows (or shrinks) the whole Favorites section, keeping the dish you tapped still on screen while it does.
+function favSection(show,sec,after){
+  var el=$("favs"), cs=getComputedStyle(el), A=sec&&sec.anchor, T=sec&&sec.top0;
+  cancelAnimationFrame(favRaf);
+  el.getAnimations().forEach(function(a){ a.cancel(); });
+  var track=function(){ if(A&&A.isConnected){ var d=A.getBoundingClientRect().top-T; if(Math.abs(d)>.5) window.scrollBy({top:d,behavior:"instant"}); } };
+  if(show) el.hidden=false;
+  var h=el.offsetHeight; if(cs.boxSizing!=="border-box") h-=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);
+  var full={height:h+"px",paddingTop:cs.paddingTop,paddingBottom:cs.paddingBottom,marginTop:cs.marginTop,marginBottom:cs.marginBottom,opacity:1};
+  var zero={height:"0px",paddingTop:"0px",paddingBottom:"0px",marginTop:"0px",marginBottom:"0px",opacity:0};
+  el.style.overflow="hidden";
+  var hd=el.querySelector("h2");
+  if(show&&hd){ hd.classList.remove("head-in"); void hd.offsetWidth; hd.classList.add("head-in"); }
+  var anim=el.animate(show?[zero,full]:[full,zero],{duration:show?600:450,easing:"cubic-bezier(.2,.8,.2,1)"});
+  (function loop(){ track(); favRaf=requestAnimationFrame(loop); })();
+  anim.onfinish=function(){ cancelAnimationFrame(favRaf); track(); el.style.overflow=""; if(!show) el.hidden=true; if(after) after(); };
+}
+// sec (optional) turns on the grow/shrink animation of the section; page load calls this without it.
+function syncFavs(newId,sec){
   Array.prototype.forEach.call(document.querySelectorAll(".fav"),paintFav);
-  var list=$("list-favs"); list.innerHTML="";
+  var el=$("favs"), list=$("list-favs"), show=!!FAVS.length, was=!el.hidden;
+  $("navFav").hidden=!show;
+  if(sec&&was&&!show){ favSection(false,sec,function(){ list.innerHTML=""; }); return; } // keep the card on screen while it shrinks away
+  list.innerHTML="";
   MENU.forEach(function(m){ if(isFav(m.id)){ var c=makeCard(m,"fav"); if(m.id===newId) c.classList.add("fav-new"); list.appendChild(c); } });
-  $("favs").hidden=$("navFav").hidden=!FAVS.length;
-  initDials(list,"fav",newId?"fresh":"fresh");
+  initDials(list,"fav","fresh");
+  if(sec&&!was&&show) favSection(true,sec); else el.hidden=!show;
 }
 // A gold star flies from the tapped button up to the Favorites link, leaving sparkles; the link bumps when it lands.
 function flyStar(from){
@@ -625,8 +650,8 @@ function toggleFav(id,btn){
   Array.prototype.forEach.call(document.querySelectorAll('.fav[data-id="'+id+'"]'),paintFav);
   toast(adding?"Saved to your favorites":"Removed from your favorites");
   function finish(){
-    syncFavs(adding&&!FAV_REDUCED?id:null);
-    if(anchor&&anchor.isConnected){ var d=anchor.getBoundingClientRect().top-top0; if(Math.abs(d)>1) window.scrollBy({top:d,behavior:"instant"}); }
+    syncFavs(adding&&!FAV_REDUCED?id:null,FAV_REDUCED?null:{anchor:anchor,top0:top0});
+    if(FAV_REDUCED&&anchor&&anchor.isConnected){ var d=anchor.getBoundingClientRect().top-top0; if(Math.abs(d)>1) window.scrollBy({top:d,behavior:"instant"}); }
     if(adding){
       Array.prototype.forEach.call(document.querySelectorAll('.fav[data-id="'+id+'"]'),function(f){
         f.classList.remove("pop"); void f.offsetWidth; f.classList.add("pop");
