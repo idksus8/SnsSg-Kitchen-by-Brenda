@@ -438,7 +438,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
 </dialog>
 
 <!-- Account / order history dialog -->
-<dialog id="acctDlg" aria-label="Your orders">
+<dialog id="acctDlg" aria-label="Your account">
   <button class="x" type="button" id="acctX" aria-label="Close">&times;</button>
   <div class="dlg-body" id="acctBody"></div>
 </dialog>
@@ -854,12 +854,13 @@ function authView(box,mode,done,back){
     (su?'<label class="f">Name<input type="text" id="aName" autocomplete="name"></label><label class="f">Phone (optional)<input type="tel" id="aPhone" autocomplete="tel"></label>':'')+
     '<label class="f">Email<input type="email" id="aEmail" autocomplete="email"></label>'+
     '<label class="f">Password'+(su?' (at least 8 characters)':'')+'<input type="password" id="aPass" autocomplete="'+(su?'new':'current')+'-password"></label>'+
+    (su?'<label class="f">Confirm password<input type="password" id="aPass2" autocomplete="new-password"></label>':'')+
     '<label class="opt"><input type="checkbox" id="aShow"> Show password</label>'+
     (su?'':'<p class="fine" style="padding:0"><button class="lnk" type="button" id="aForgot">Forgot password?</button></p>')+
     '<p class="err" id="aErr" role="alert"></p>'+
     '<button class="btn" type="button" id="aGo">'+(su?'Create account':'Log in')+'</button>'+
     '<p class="fine" style="padding:0">'+(su?'Already have an account? <button class="lnk" type="button" id="aSw">Log in</button>':'New here? <button class="lnk" type="button" id="aSw">Create an account</button>')+(back?' &middot; <button class="lnk" type="button" id="aBack">Back</button>':'')+'</p>';
-  $("aShow").onchange=function(){ $("aPass").type=this.checked?"text":"password"; };
+  $("aShow").onchange=function(){ var t=this.checked?"text":"password"; $("aPass").type=t; if($("aPass2")) $("aPass2").type=t; };
   $("aSw").onclick=function(){ authView(box,su?"login":"signup",done,back); };
   if(back) $("aBack").onclick=back;
   if($("aForgot")) $("aForgot").onclick=function(){ forgotView(box,done,back); };
@@ -869,6 +870,7 @@ function authView(box,mode,done,back){
     if(su&&!nm){ err.textContent="Enter your name."; return; }
     if(!/^\S+@\S+\.\S+$/.test(em)){ err.textContent="Enter a valid email address."; return; }
     if(su&&pw.length<8){ err.textContent="Your password needs at least 8 characters."; return; }
+    if(su&&pw!==$("aPass2").value){ err.textContent="Passwords do not match. Please type the same password in both boxes."; return; }
     if(!su&&!pw){ err.textContent="Enter your password."; return; }
     go.disabled=true; err.textContent="";
     var p=su?sb("/auth/v1/signup",{email:em,password:pw,data:{name:nm,phone:ph}}):sb("/auth/v1/token?grant_type=password",{email:em,password:pw});
@@ -920,13 +922,15 @@ function recoveryFromLink(){
   clear();
   box.innerHTML='<h2>Choose a new password</h2>'+
     '<label class="f">New password (at least 8 characters)<input type="password" id="rPass" autocomplete="new-password"></label>'+
+    '<label class="f">Confirm new password<input type="password" id="rPass2" autocomplete="new-password"></label>'+
     '<label class="opt"><input type="checkbox" id="rShow"> Show password</label>'+
     '<p class="err" id="rErr" role="alert"></p>'+
     '<button class="btn" type="button" id="rGo">Save new password</button>';
-  $("rShow").onchange=function(){ $("rPass").type=this.checked?"text":"password"; };
+  $("rShow").onchange=function(){ var t=this.checked?"text":"password"; $("rPass").type=t; $("rPass2").type=t; };
   $("rGo").onclick=function(){
     var pw=$("rPass").value, err=$("rErr"), go=$("rGo");
     if(pw.length<8){ err.textContent="Your password needs at least 8 characters."; return; }
+    if(pw!==$("rPass2").value){ err.textContent="Passwords do not match. Please type the same password in both boxes."; return; }
     go.disabled=true; err.textContent="";
     sb("/auth/v1/user",{password:pw},access,"PUT").then(function(u){
       setSes({access:access,refresh:refresh,exp:exp,user:u});
@@ -960,8 +964,7 @@ function drawRecent(){
   sec.hidden=false;
   if(recentFor===SES.user.id) return;
   recentFor=SES.user.id;
-  $("recentBody").innerHTML='<p class="fine" style="padding:0">Signed in as <strong>'+esc(SES.user.email||"")+'</strong> &middot; <button class="lnk" type="button" id="aOut">Log out</button></p><div id="ordList"><p class="empty" style="padding:8px 0">Loading your orders...</p></div>';
-  $("aOut").onclick=function(){ logout().then(function(){ toast("You are logged out"); }); };
+  $("recentBody").innerHTML='<p class="fine" style="padding:0">Signed in as <strong>'+esc(SES.user.email||"")+'</strong></p><div id="ordList"><p class="empty" style="padding:8px 0">Loading your orders...</p></div>';
   token().then(function(t){
     if(!t){ var e=new Error("Please log in to see your orders."); e.auth=true; throw e; }
     return fetch("/api/orders",{headers:{Authorization:"Bearer "+t}});
@@ -975,14 +978,52 @@ function drawRecent(){
     if($("ordList")) $("ordList").innerHTML='<p class="err">'+esc((e&&e.message)||"We could not load your orders.")+'</p>';
   });
 }
-// Header button: login dialog when logged out, jump to recent orders when logged in.
+// Header button: login dialog when logged out, account dialog (change password, log out) when logged in.
+function acctView(){
+  var box=$("acctBody");
+  box.innerHTML='<h2>Your account</h2><p class="fine" style="padding:0">Signed in as <strong>'+esc(SES.user.email||"")+'</strong></p>'+
+    '<button class="btn alt" type="button" id="aOrders">View recent orders</button>'+
+    '<button class="btn alt" type="button" id="aPw">Change password</button>'+
+    '<button class="btn alt" type="button" id="aOut">Log out</button>';
+  $("aOrders").onclick=function(){ $("acctDlg").close(); drawRecent(); $("recent").scrollIntoView({behavior:"smooth",block:"start"}); };
+  $("aPw").onclick=pwView;
+  $("aOut").onclick=function(){ logout().then(function(){ $("acctDlg").close(); toast("You are logged out"); }); };
+}
+function pwView(){
+  var box=$("acctBody");
+  box.innerHTML='<h2>Change password</h2>'+
+    '<label class="f">Current password<input type="password" id="pCur" autocomplete="current-password"></label>'+
+    '<label class="f">New password (at least 8 characters)<input type="password" id="pNew" autocomplete="new-password"></label>'+
+    '<label class="f">Confirm new password<input type="password" id="pNew2" autocomplete="new-password"></label>'+
+    '<label class="opt"><input type="checkbox" id="pShow"> Show passwords</label>'+
+    '<p class="err" id="pErr" role="alert"></p>'+
+    '<button class="btn" type="button" id="pGo">Save new password</button>'+
+    '<button class="btn alt" type="button" id="pBack">Back</button>';
+  $("pShow").onchange=function(){ var t=this.checked?"text":"password"; $("pCur").type=t; $("pNew").type=t; $("pNew2").type=t; };
+  $("pBack").onclick=acctView;
+  $("pGo").onclick=function(){
+    var cur=$("pCur").value, pw=$("pNew").value, err=$("pErr"), go=$("pGo");
+    if(!cur){ err.textContent="Enter your current password."; return; }
+    if(pw.length<8){ err.textContent="Your new password needs at least 8 characters."; return; }
+    if(pw!==$("pNew2").value){ err.textContent="Passwords do not match. Please type the same password in both boxes."; return; }
+    if(pw===cur){ err.textContent="Your new password must be different from your current one."; return; }
+    go.disabled=true; err.textContent="";
+    // Check the current password first, so a phone left logged in cannot be used to lock the owner out.
+    sb("/auth/v1/token?grant_type=password",{email:SES.user.email,password:cur})
+      .catch(function(){ throw new Error("Your current password is not correct."); })
+      .then(function(){ return token(); })
+      .then(function(t){ return sb("/auth/v1/user",{password:pw},t,"PUT"); })
+      .then(function(){ toast("Password updated"); acctView(); })
+      .catch(function(e){ go.disabled=false; err.textContent=e.message; });
+  };
+}
 function openAcct(){
   if(!SES){
     authView($("authBody"),"login",function(){ $("authDlg").close(); toast("You are logged in"); });
     $("authDlg").showModal(); return;
   }
-  drawRecent();
-  $("recent").scrollIntoView({behavior:"smooth",block:"start"});
+  acctView();
+  $("acctDlg").showModal();
 }
 document.addEventListener("click",function(e){ if(e.target.closest&&e.target.closest("[data-ack]")) $("ackDlg").showModal(); });
 function hideCaution(){
