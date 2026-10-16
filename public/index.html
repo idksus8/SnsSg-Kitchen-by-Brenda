@@ -300,6 +300,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
 .ords{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .ord{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:6px}
 .ord ul{margin:0;padding-left:18px}
+.ord .re{width:auto;justify-self:start;padding:8px 18px;font-size:.92rem;margin-top:2px}
 .ord .sub{color:var(--muted);font-size:.88rem}
 </style>
 </head>
@@ -954,12 +955,14 @@ function ordHTML(o){
   var items=(o.items||[]).map(function(i){ return '<li>'+(+i.qty||1)+' &times; '+esc(i.label)+'</li>'; }).join("");
   return '<li class="ord"><div class="row"><strong>'+esc(fmtDay(new Date(o.created_at),false))+'</strong><strong>'+money(o.total_cents/100)+'</strong></div>'+
     '<div class="sub">Order #'+esc(String(o.id).slice(0,8).toUpperCase())+' &middot; '+esc(o.mode||"Pickup")+(o.mode==="Delivery"&&o.addr?': '+esc(o.addr):'')+(o.when_text&&o.when_text!=="ASAP"?' &middot; '+esc(o.when_text):'')+'</div>'+
-    (String(o.stripe_session_id||"").indexOf("zelle_")===0?'<div class="sub">Paid with Zelle. Brenda confirms once she sees your payment.</div>':'')+'<ul>'+items+'</ul>'+(o.note?'<div class="sub">Note: '+esc(o.note)+'</div>':'')+'</li>';
+    (String(o.stripe_session_id||"").indexOf("zelle_")===0?'<div class="sub">Paid with Zelle. Brenda confirms once she sees your payment.</div>':'')+'<ul>'+items+'</ul>'+(o.note?'<div class="sub">Note: '+esc(o.note)+'</div>':'')+'<button class="btn alt re" type="button" data-re="'+esc(String(o.id))+'">Reorder</button></li>';
 }
 // Recent orders live on the main page for logged-in customers.
 var recentFor="";
+var ORDERS={};
 function showOrders(list){
   var el=$("ordList"), all=false;
+  list.forEach(function(o){ ORDERS[o.id]=o; });
   if(!list.length){ el.innerHTML='<p class="empty" style="padding:8px 0">No orders yet. Orders you place while logged in will show up here.</p>'; return; }
   function paint(){
     el.innerHTML='<ul class="ords">'+(all?list:list.slice(0,3)).map(ordHTML).join("")+'</ul>'+
@@ -1035,7 +1038,38 @@ function openAcct(){
   acctView();
   $("acctDlg").showModal();
 }
-document.addEventListener("click",function(e){ if(e.target.closest&&e.target.closest("[data-ack]")) $("ackDlg").showModal(); });
+// Reorder: puts the items of a past order back into the cart. Old order lines are text like
+// "Kisinia (2 chapatis, Fries) - Note: extra pepper", so they are matched back to the menu.
+function reorder(id){
+  var o=ORDERS[id]; if(!o) return;
+  var added=0, skipped=0;
+  (o.items||[]).forEach(function(it){
+    var label=String(it.label||"");
+    if(label==="Delivery fee") return;
+    var m=null;
+    MENU.forEach(function(x){ if(label.indexOf(x.name)===0 && (!m||x.name.length>m.name.length)) m=x; });
+    if(!m){ skipped++; return; }
+    var rest=label.slice(m.name.length), opt="", note="";
+    var nm=/ - Note: ([\s\S]*)$/.exec(rest); if(nm){ note=nm[1].trim(); rest=rest.slice(0,nm.index); }
+    if(m.options){
+      var om=/^ \(([^)]*)\)/.exec(rest), got=om?om[1].split(", "):[];
+      var okv=m.options.values.filter(function(v){ return got.indexOf(v)>-1; });
+      if(!okv.length){ skipped++; return; }
+      opt=okv.join(", ");
+    }
+    var qty=Math.max(1,Math.min(50,+it.qty||1));
+    var ex=cart.filter(function(l){ return l.id===m.id&&l.opt===opt&&l.note===note; })[0];
+    if(ex) ex.qty=Math.min(50,ex.qty+qty); else cart.push({id:m.id,opt:opt,note:note,qty:qty});
+    added++;
+  });
+  if(!added){ toast("Those items are no longer on the menu"); return; }
+  save(); render();
+  toast("Added to your order"+(skipped?". Some items are no longer on the menu.":""));
+}
+document.addEventListener("click",function(e){
+  if(e.target.closest&&e.target.closest("[data-ack]")) $("ackDlg").showModal();
+  var rb=e.target.closest&&e.target.closest("[data-re]"); if(rb) reorder(rb.getAttribute("data-re"));
+});
 function hideCaution(){
   document.querySelectorAll(".caution").forEach(function(el){
     if(window.matchMedia("(prefers-reduced-motion: reduce)").matches){ el.style.display="none"; return; }
