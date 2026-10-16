@@ -589,12 +589,19 @@ function paintFav(f){
 var FAV_REDUCED=!!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches);
 var STAR_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.78 5.9 6.47.85-4.74 4.46 1.2 6.4L12 17.2l-5.71 3.2 1.2-6.4L2.75 9.55l6.47-.85z"/></svg>';
 var favRaf=0;
-// Grows (or shrinks) the whole Favorites section, keeping the dish you tapped still on screen while it does.
-function favSection(show,sec,after){
-  var el=$("favs"), cs=getComputedStyle(el), A=sec&&sec.anchor, T=sec&&sec.top0;
+// While the Favorites section changes size, keep the dish you tapped still on screen. Returns a stop function.
+function favFollow(sec){
+  var A=sec&&sec.anchor, T=sec&&sec.top0;
+  var tick=function(){ if(A&&A.isConnected){ var d=A.getBoundingClientRect().top-T; if(Math.abs(d)>.5) window.scrollBy({top:d,behavior:"instant"}); } };
   cancelAnimationFrame(favRaf);
+  (function loop(){ tick(); favRaf=requestAnimationFrame(loop); })();
+  return function(){ cancelAnimationFrame(favRaf); tick(); };
+}
+// Grows (or shrinks) the whole Favorites section when the first favorite is added or the last one removed.
+function favSection(show,sec,after){
+  var el=$("favs");
   el.getAnimations().forEach(function(a){ a.cancel(); });
-  var track=function(){ if(A&&A.isConnected){ var d=A.getBoundingClientRect().top-T; if(Math.abs(d)>.5) window.scrollBy({top:d,behavior:"instant"}); } };
+  var cs=getComputedStyle(el);
   if(show) el.hidden=false;
   var h=el.offsetHeight; if(cs.boxSizing!=="border-box") h-=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);
   var full={height:h+"px",paddingTop:cs.paddingTop,paddingBottom:cs.paddingBottom,marginTop:cs.marginTop,marginBottom:cs.marginBottom,opacity:1};
@@ -602,20 +609,48 @@ function favSection(show,sec,after){
   el.style.overflow="hidden";
   var hd=el.querySelector("h2");
   if(show&&hd){ hd.classList.remove("head-in"); void hd.offsetWidth; hd.classList.add("head-in"); }
-  var anim=el.animate(show?[zero,full]:[full,zero],{duration:show?600:450,easing:"cubic-bezier(.2,.8,.2,1)"});
-  (function loop(){ track(); favRaf=requestAnimationFrame(loop); })();
-  anim.onfinish=function(){ cancelAnimationFrame(favRaf); track(); el.style.overflow=""; if(!show) el.hidden=true; if(after) after(); };
+  var stop=favFollow(sec);
+  el.animate(show?[zero,full]:[full,zero],{duration:show?600:450,easing:"cubic-bezier(.2,.8,.2,1)"}).onfinish=function(){
+    stop(); el.style.overflow=""; if(!show) el.hidden=true; if(after) after();
+  };
 }
-// sec (optional) turns on the grow/shrink animation of the section; page load calls this without it.
+// Where each favorite card is on screen right now, so the cards left behind can glide to their new spots.
+function favRects(list){
+  var o={};
+  Array.prototype.forEach.call(list.children,function(c){
+    var f=c.querySelector(".fav");
+    if(f&&!c.classList.contains("fav-out")) o[f.getAttribute("data-id")]=c.getBoundingClientRect();
+  });
+  return o;
+}
+// Cards that moved (a row filled or emptied) slide from their old spot to the new one; the section eases to its new height.
+function favShift(old,h0,sec){
+  var el=$("favs"), list=$("list-favs");
+  Array.prototype.forEach.call(list.children,function(c){
+    var f=c.querySelector(".fav"), o=f&&old[f.getAttribute("data-id")]; if(!o) return;
+    var n=c.getBoundingClientRect(), dx=o.left-n.left, dy=o.top-n.top;
+    if(Math.abs(dx)<1&&Math.abs(dy)<1) return;
+    c.animate([{transform:"translate("+dx+"px,"+dy+"px)"},{transform:"none"}],{duration:500,easing:"cubic-bezier(.2,.8,.2,1)"});
+  });
+  var h1=el.offsetHeight;
+  if(Math.abs(h1-h0)>1){
+    var stop=favFollow(sec); el.style.overflow="hidden";
+    el.animate([{height:h0+"px"},{height:h1+"px"}],{duration:500,easing:"cubic-bezier(.2,.8,.2,1)"}).onfinish=function(){ el.style.overflow=""; stop(); };
+  }
+}
+// sec (optional) turns the animations on; page load calls this without it.
 function syncFavs(newId,sec){
   Array.prototype.forEach.call(document.querySelectorAll(".fav"),paintFav);
   var el=$("favs"), list=$("list-favs"), show=!!FAVS.length, was=!el.hidden;
   $("navFav").hidden=!show;
-  if(sec&&was&&!show){ favSection(false,sec,function(){ list.innerHTML=""; }); return; } // keep the card on screen while it shrinks away
+  if(sec&&was&&!show){ favSection(false,sec,function(){ list.innerHTML=""; }); return; } // keep the card on screen while the section shrinks
+  var old=(sec&&was)?favRects(list):null, h0=(sec&&was)?el.offsetHeight:0;
   list.innerHTML="";
   MENU.forEach(function(m){ if(isFav(m.id)){ var c=makeCard(m,"fav"); if(m.id===newId) c.classList.add("fav-new"); list.appendChild(c); } });
   initDials(list,"fav","fresh");
-  if(sec&&!was&&show) favSection(true,sec); else el.hidden=!show;
+  if(sec&&!was&&show){ favSection(true,sec); return; }
+  el.hidden=!show;
+  if(old) favShift(old,h0,sec);
 }
 // A gold star flies from the tapped button up to the Favorites link, leaving sparkles; the link bumps when it lands.
 function flyStar(from){
