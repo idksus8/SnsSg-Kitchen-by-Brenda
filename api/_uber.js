@@ -2,7 +2,6 @@
 // Stays switched off (flat delivery fee, no courier booking) until every setting below is added in Vercel.
 const crypto = require("crypto");
 const { UserError, DELIVERY_FEE_CENTS, SHOP_NAME } = require("./_menu");
-const { verifyAddress } = require("./_places");
 
 const E = () => process.env;
 const enabled = () => !!(E().UBER_CLIENT_ID && E().UBER_CLIENT_SECRET && E().UBER_CUSTOMER_ID && E().PICKUP_ADDRESS && E().DISPATCH_SECRET);
@@ -93,7 +92,6 @@ function readQuote(addr, tok) {
 async function feeFor(addr, tok) {
   const locked = readQuote(addr, tok);
   if (locked !== null) return { feeCents: locked, quote: tok };
-  await verifyAddress(addr); // a signed quote only exists for addresses already checked, so this covers checkout and Zelle
   const feeCents = await deliveryFee(addr);
   return { feeCents, quote: signQuote(addr, feeCents) };
 }

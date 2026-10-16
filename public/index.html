@@ -329,11 +329,6 @@ dialog[open]::backdrop{animation:fade .25s ease}
 @keyframes nudgeR{0%,100%{transform:translateX(0)}50%{transform:translateX(5px)}}
 @media (prefers-reduced-motion: reduce){.ords-arr,.ords-arr span{animation:none!important;transition:none}}
 .ord .sub{color:var(--muted);font-size:.88rem}
-.sug{list-style:none;margin:6px 0 0;padding:4px;border:1px solid var(--line);border-radius:10px;background:var(--bg);display:grid;gap:2px}
-.sug li{padding:10px 12px;border-radius:8px;cursor:pointer}
-.sug li[aria-selected=true],.sug li:hover{background:var(--surface)}
-.sug li.pw{font-size:.75rem;color:var(--muted);text-align:right;cursor:default;padding:2px 8px}
-.sug li.pw:hover{background:none}
 </style>
 </head>
 <body>
@@ -834,7 +829,7 @@ function openDetails(){
    '<label class="f">Name<input type="text" id="cName" autocomplete="name"></label>'+
    '<label class="f">Phone<input type="tel" id="cPhone" autocomplete="tel"></label>'+
    '<div class="seg" role="radiogroup" aria-label="Pickup or delivery"><label><input type="radio" name="mode" value="Pickup" checked> Pickup</label><label><input type="radio" name="mode" value="Delivery"> Delivery</label></div>'+
-   '<div class="collapse" id="addrWrap" inert><div><label class="f">Delivery address<input type="text" id="cAddr" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="addrList" aria-autocomplete="list"></label><ul class="sug" id="addrList" role="listbox" aria-label="Address suggestions" hidden></ul><p class="fine" id="addrSt" style="padding:0" aria-live="polite"></p></div></div>'+
+   '<div class="collapse" id="addrWrap" inert><div><label class="f">Delivery address<input type="text" id="cAddr" autocomplete="street-address"></label></div></div>'+
    '<div class="fw"><span id="whenLbl">When do you want it?</span><div class="seg" role="radiogroup" aria-labelledby="whenLbl"><label><input type="radio" name="when" value="ASAP" checked> ASAP</label><label><input type="radio" name="when" value="Schedule"> Schedule</label></div></div>'+
    '<div class="collapse" id="schedWrap" inert><div class="sched-in"><div class="cal" id="cal"></div><label class="f">Time<input type="time" id="cTime" step="900"></label><p class="calsum" id="calSum" aria-live="polite"></p></div></div>'+
    '<label class="f">Notes for Brenda (optional)<textarea id="cNote"></textarea></label>'+
@@ -859,57 +854,18 @@ function openDetails(){
   }; });
   calInit();
   $("cGo").onclick=pay;
-  // Address suggestions (Google, via /api/places) and a check that the address is real (via /api/quote)
-  var aT=null, aSeq=0, aOn=true, aLast="", aSel=-1, aIt=[];
-  var inp=$("cAddr"), list=$("addrList"), st=$("addrSt");
-  function aClose(){ list.hidden=true; list.innerHTML=""; aIt=[]; aSel=-1; inp.setAttribute("aria-expanded","false"); inp.removeAttribute("aria-activedescendant"); }
-  function aMark(i){
-    aSel=i;
-    Array.prototype.forEach.call(list.querySelectorAll("li[data-i]"),function(li,k){ li.setAttribute("aria-selected",k===i?"true":"false"); });
-    if(i>=0) inp.setAttribute("aria-activedescendant","sug"+i); else inp.removeAttribute("aria-activedescendant");
-  }
-  function aCheck(){
-    var a=inp.value.trim(); if(!a||a===aLast) return;
-    aLast=a; st.textContent="Checking address...";
+  $("cAddr").onchange=function(){
+    var a=this.value.trim(); if(!a) return;
     fetch("/api/quote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({addr:a})})
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
       .then(function(x){
-        if(!x.ok){ aLast=""; st.textContent=""; $("cErr").textContent=x.j.error||"We can't deliver to that address."; return; }
-        $("cErr").textContent=""; st.textContent="\u2713 Address found"; DELIVERY_FEE=x.j.feeCents/100; QUOTE={addr:a,token:x.j.quote||""};
+        if(!x.ok){ $("cErr").textContent=x.j.error||"We can't deliver to that address."; return; }
+        $("cErr").textContent=""; DELIVERY_FEE=x.j.feeCents/100; QUOTE={addr:a,token:x.j.quote||""};
         DIALS["cofee"]=money(DELIVERY_FEE).replace(/\d/g,"0"); dialSet($("coFee"),money(DELIVERY_FEE),"cofee");
         var m=document.querySelector('input[name="mode"]:checked');
         if(m&&m.value==="Delivery") dialSet($("coTotal"),money(total()+DELIVERY_FEE),"cototal");
-      }).catch(function(){ aLast=""; st.textContent=""; });
-  }
-  function aPick(t){ inp.value=t; aClose(); aCheck(); }
-  inp.oninput=function(){
-    aLast=""; st.textContent=""; clearTimeout(aT);
-    var q=inp.value.trim();
-    if(!aOn||q.length<3){ aClose(); return; }
-    aT=setTimeout(function(){
-      var my=++aSeq;
-      fetch("/api/places",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({q:q})})
-        .then(function(r){ return r.json(); })
-        .then(function(j){
-          if(my!==aSeq) return;
-          if(j.enabled===false){ aOn=false; aClose(); return; }
-          aIt=(j.suggestions||[]).map(function(s){ return s.text; });
-          list.innerHTML=aIt.map(function(t,i){ return '<li role="option" id="sug'+i+'" aria-selected="false" data-i="'+i+'">'+esc(t)+'</li>'; }).join("")+'<li class="pw" aria-hidden="true">Powered by Google</li>';
-          list.hidden=!aIt.length; aSel=-1; inp.setAttribute("aria-expanded",aIt.length?"true":"false");
-        }).catch(function(){});
-    },250);
+      }).catch(function(){});
   };
-  inp.onkeydown=function(e){
-    if(list.hidden||!aIt.length) return;
-    if(e.key==="ArrowDown"){ e.preventDefault(); aMark((aSel+1)%aIt.length); }
-    else if(e.key==="ArrowUp"){ e.preventDefault(); aMark((aSel+aIt.length-1)%aIt.length); }
-    else if(e.key==="Enter"&&aSel>=0){ e.preventDefault(); aPick(aIt[aSel]); }
-    else if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); aClose(); }
-  };
-  inp.onchange=aCheck;
-  inp.onblur=function(){ setTimeout(aClose,120); };
-  list.onmousedown=function(e){ e.preventDefault(); }; // keep the cursor in the box so clicking a suggestion is not treated as leaving it
-  list.onclick=function(e){ var li=e.target.closest("li[data-i]"); if(li) aPick(aIt[+li.getAttribute("data-i")]); };
   if($("zGo")) $("zGo").onclick=zelleStart;
   prefill();
   if(!$("coDlg").open) $("coDlg").showModal();
