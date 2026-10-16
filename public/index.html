@@ -361,6 +361,10 @@ dialog[open]::backdrop{animation:fade .25s ease}
 
 <main class="wrap">
   <div>
+    <section class="section" id="recent" hidden>
+      <h2>Your recent orders</h2>
+      <div id="recentBody"></div>
+    </section>
     <section class="section" id="soups">
       <h2>Soups</h2>
       <div class="items" id="list-soups"></div>
@@ -822,7 +826,7 @@ function openDetails(){
 var ACCT=null, SES=null;
 try{ SES=JSON.parse(localStorage.getItem("snssg-auth")||"null"); }catch(e){}
 function setSes(s){ SES=s; try{ if(s) localStorage.setItem("snssg-auth",JSON.stringify(s)); else localStorage.removeItem("snssg-auth"); }catch(e){} drawAcct(); }
-function drawAcct(){ var b=$("acctBtn"); b.hidden=!ACCT; b.textContent=SES?"Account":"Log in"; $("signBtn").hidden=!ACCT||!!SES; }
+function drawAcct(){ var b=$("acctBtn"); b.hidden=!ACCT; b.textContent=SES?"Account":"Log in"; $("signBtn").hidden=!ACCT||!!SES; drawRecent(); }
 function sb(path,body,tok,method){
   var h={"Content-Type":"application/json",apikey:ACCT.key};
   tok=tok||(ACCT.key.indexOf("eyJ")===0?ACCT.key:"");
@@ -938,26 +942,47 @@ function ordHTML(o){
     '<div class="sub">Order #'+esc(String(o.id).slice(0,8).toUpperCase())+' &middot; '+esc(o.mode||"Pickup")+(o.mode==="Delivery"&&o.addr?': '+esc(o.addr):'')+(o.when_text&&o.when_text!=="ASAP"?' &middot; '+esc(o.when_text):'')+'</div>'+
     '<ul>'+items+'</ul>'+(o.note?'<div class="sub">Note: '+esc(o.note)+'</div>':'')+'</li>';
 }
-// Header button: login dialog when logged out, order history when logged in.
-function openAcct(){
-  if(!SES){
-    authView($("authBody"),"login",function(){ $("authDlg").close(); toast("You are logged in"); });
-    $("authDlg").showModal(); return;
+// Recent orders live on the main page for logged-in customers.
+var recentFor="";
+function showOrders(list){
+  var el=$("ordList"), all=false;
+  if(!list.length){ el.innerHTML='<p class="empty" style="padding:8px 0">No orders yet. Orders you place while logged in will show up here.</p>'; return; }
+  function paint(){
+    el.innerHTML='<ul class="ords">'+(all?list:list.slice(0,3)).map(ordHTML).join("")+'</ul>'+
+      (list.length>3?'<p style="margin:10px 0 0"><button class="lnk" type="button" id="ordMore">'+(all?"Show fewer":"Show all "+list.length+" orders")+'</button></p>':"");
+    if($("ordMore")) $("ordMore").onclick=function(){ all=!all; paint(); };
   }
-  $("acctBody").innerHTML='<h2>Your orders</h2><p class="fine" style="padding:0">Signed in as <strong>'+esc(SES.user.email||"")+'</strong> &middot; <button class="lnk" type="button" id="aOut">Log out</button></p><div id="ordList"><p class="empty" style="padding:8px 0">Loading your orders...</p></div>';
-  $("aOut").onclick=function(){ logout().then(function(){ $("acctDlg").close(); toast("You are logged out"); }); };
-  $("acctDlg").showModal();
+  paint();
+}
+function drawRecent(){
+  var sec=$("recent"); if(!sec) return;
+  if(!ACCT||!SES){ sec.hidden=true; recentFor=""; $("recentBody").innerHTML=""; return; }
+  sec.hidden=false;
+  if(recentFor===SES.user.id) return;
+  recentFor=SES.user.id;
+  $("recentBody").innerHTML='<p class="fine" style="padding:0">Signed in as <strong>'+esc(SES.user.email||"")+'</strong> &middot; <button class="lnk" type="button" id="aOut">Log out</button></p><div id="ordList"><p class="empty" style="padding:8px 0">Loading your orders...</p></div>';
+  $("aOut").onclick=function(){ logout().then(function(){ toast("You are logged out"); }); };
   token().then(function(t){
     if(!t){ var e=new Error("Please log in to see your orders."); e.auth=true; throw e; }
     return fetch("/api/orders",{headers:{Authorization:"Bearer "+t}});
   }).then(function(r){
     return r.json().then(function(j){ if(!r.ok){ var e=new Error(j.error||"We could not load your orders."); e.auth=(r.status===401); throw e; } return j; });
   }).then(function(j){
-    $("ordList").innerHTML=(j.orders&&j.orders.length)?'<ul class="ords">'+j.orders.map(ordHTML).join("")+'</ul>':'<p class="empty" style="padding:8px 0">No orders yet. Orders you place while logged in will show up here.</p>';
+    showOrders(j.orders||[]);
   }).catch(function(e){
-    if(e&&e.auth){ setSes(null); $("acctDlg").close(); openAcct(); return; }
-    $("ordList").innerHTML='<p class="err">'+esc((e&&e.message)||"We could not load your orders.")+'</p>';
+    if(e&&e.auth){ setSes(null); return; }
+    recentFor="";
+    if($("ordList")) $("ordList").innerHTML='<p class="err">'+esc((e&&e.message)||"We could not load your orders.")+'</p>';
   });
+}
+// Header button: login dialog when logged out, jump to recent orders when logged in.
+function openAcct(){
+  if(!SES){
+    authView($("authBody"),"login",function(){ $("authDlg").close(); toast("You are logged in"); });
+    $("authDlg").showModal(); return;
+  }
+  drawRecent();
+  $("recent").scrollIntoView({behavior:"smooth",block:"start"});
 }
 document.addEventListener("click",function(e){ if(e.target.closest&&e.target.closest("[data-ack]")) $("ackDlg").showModal(); });
 function hideCaution(){
