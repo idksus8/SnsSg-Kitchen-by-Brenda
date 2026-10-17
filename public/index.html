@@ -10,9 +10,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --green:#17372B; --green-ink:#FFFFFF; --saffron:#F0A91F; --chili:#C23B22;
-  --bg:#FFFFFF; --surface:#F3F5F2; --text:#1D1D1B; --muted:#5E6661; --line:#DDE2DD;
-  --btn:#17372B; --btn-text:#FFFFFF; --focus:#1B6FD1;
+  /* Blue and gold. (--green is the main blue and --saffron is the gold; the names are old.) */
+  --green:#12306E; --green-ink:#FFFFFF; --saffron:#F0B323; --chili:#C23B22;
+  --bg:#FFFFFF; --surface:#F2F5FA; --text:#1A1D24; --muted:#5A6577; --line:#DCE3EE;
+  --btn:#12306E; --btn-text:#FFFFFF; --focus:#1B6FD1;
   color-scheme: light;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
@@ -20,15 +21,15 @@
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --green:#0F241C; --green-ink:#F4F7F4; --saffron:#F4B740; --chili:#EF7A63;
-    --bg:#121614; --surface:#1B211E; --text:#F1F4F1; --muted:#A3ADA7; --line:#2C3530;
-    --btn:#F4B740; --btn-text:#1A1405; --focus:#7DB4F5; color-scheme: dark;
+    --green:#0B1B3D; --green-ink:#F2F6FF; --saffron:#F4C240; --chili:#EF7A63;
+    --bg:#0E1522; --surface:#172033; --text:#EEF2FA; --muted:#A2AEC4; --line:#28344C;
+    --btn:#F4C240; --btn-text:#1A1405; --focus:#7DB4F5; color-scheme: dark;
   }
 }
 :root[data-theme="dark"]{
-  --green:#0F241C; --green-ink:#F4F7F4; --saffron:#F4B740; --chili:#EF7A63;
-  --bg:#121614; --surface:#1B211E; --text:#F1F4F1; --muted:#A3ADA7; --line:#2C3530;
-  --btn:#F4B740; --btn-text:#1A1405; --focus:#7DB4F5; color-scheme: dark;
+  --green:#0B1B3D; --green-ink:#F2F6FF; --saffron:#F4C240; --chili:#EF7A63;
+  --bg:#0E1522; --surface:#172033; --text:#EEF2FA; --muted:#A2AEC4; --line:#28344C;
+  --btn:#F4C240; --btn-text:#1A1405; --focus:#7DB4F5; color-scheme: dark;
 }
 html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + var(--tb,56px) + var(--nv,48px) + 8px);scroll-behavior:smooth}
 *,*::before,*::after{box-sizing:border-box}
@@ -67,7 +68,7 @@ img{max-width:100%;display:block}
 .item{display:flex;justify-content:space-between;gap:14px;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;width:100%;min-height:140px}
 .item:hover{border-color:var(--green)}
 .itemw{position:relative;display:grid}
-.fav{position:absolute;top:8px;right:8px;z-index:2;width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.94);color:#6f7773;display:grid;place-items:center;padding:0;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.35);transition:transform .15s ease,color .2s ease}
+.fav{position:absolute;top:8px;right:8px;z-index:2;width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.94);color:#6B7587;display:grid;place-items:center;padding:0;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.35);transition:transform .15s ease,color .2s ease}
 .fav svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linejoin:round;transition:fill .2s ease}
 .fav[aria-pressed="true"]{color:#ffc61a}
 .fav[aria-pressed="true"] svg{fill:#ffc61a;stroke:#e0a100}
@@ -126,7 +127,7 @@ img{max-width:100%;display:block}
 .side .btn{margin:0 16px 16px;width:calc(100% - 32px)}
 
 dialog{border:0;border-radius:16px;padding:0;width:min(540px,calc(100vw - 24px));max-height:calc(100dvh - 24px);background:var(--bg);color:var(--text);box-shadow:0 20px 60px rgba(0,0,0,.4)}
-dialog::backdrop{background:rgba(10,14,12,.6)}
+dialog::backdrop{background:rgba(8,14,30,.6)}
 .dlg-photo{aspect-ratio:5/3;overflow:hidden}
 .dlg-photo img{width:100%;height:100%;object-fit:cover}
 .dlg-photo img.swap{animation:photoSwap .35s ease}
@@ -149,7 +150,7 @@ legend{font-weight:700;padding:0 6px}
 .opt:hover input[type=checkbox]:not(:checked){border-color:var(--btn)}
 .opt input[type=checkbox]:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 @keyframes cbPop{0%{transform:scale(1)}40%{transform:scale(.82)}100%{transform:scale(1)}}
-@keyframes cbRing{0%{box-shadow:0 0 0 0 rgba(240,169,31,.6)}100%{box-shadow:0 0 0 11px rgba(240,169,31,0)}}
+@keyframes cbRing{0%{box-shadow:0 0 0 0 rgba(240,179,35,.6)}100%{box-shadow:0 0 0 11px rgba(240,179,35,0)}}
 @media (prefers-reduced-motion: reduce){.opt input[type=checkbox],.opt input[type=checkbox]::before{transition:none}.opt input[type=checkbox]:checked{animation:none}}
 label.f{display:grid;gap:5px;font-weight:500}
 input[type=text],input[type=tel],input[type=email],input[type=password],textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:11px 12px}
@@ -276,14 +277,14 @@ dialog[open]::backdrop{animation:fade .25s ease}
 .tb-r{display:flex;align-items:center;gap:8px}
 /* Opening animation: brand title, then the screen splits open to show the site. */
 #intro{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;cursor:pointer}
-#intro .in-half{position:absolute;left:0;right:0;height:50.5%;background:#17372B}
+#intro .in-half{position:absolute;left:0;right:0;height:50.5%;background:#12306E}
 #intro .in-top{top:0;animation:introTop .9s cubic-bezier(.7,0,.2,1) 1.8s forwards}
 #intro .in-bot{bottom:0;animation:introBot .9s cubic-bezier(.7,0,.2,1) 1.8s forwards}
-#intro .in-mid{position:relative;text-align:center;color:#F0A91F;padding:0 20px;animation:introMid .35s ease 1.55s forwards}
+#intro .in-mid{position:relative;text-align:center;color:#F0B323;padding:0 20px;animation:introMid .35s ease 1.55s forwards}
 #intro .in-name{font-size:clamp(2.2rem,9vw,4.4rem);font-weight:800;letter-spacing:-.01em;line-height:1.05;animation:introIn .8s cubic-bezier(.2,.8,.2,1) .15s both}
-#intro .in-line{height:3px;background:#F0A91F;margin:16px auto;width:0;border-radius:3px;animation:introLine .7s ease .45s forwards}
+#intro .in-line{height:3px;background:#F0B323;margin:16px auto;width:0;border-radius:3px;animation:introLine .7s ease .45s forwards}
 #intro .in-by{font-size:clamp(1.1rem,4vw,1.6rem);font-weight:700;color:#FFFFFF;animation:introIn .7s ease .6s both}
-#intro .in-tag{margin-top:8px;text-align:center;font-size:clamp(.7rem,3.2vw,.95rem);letter-spacing:.14em;text-transform:uppercase;color:#cfd8d2;animation:introIn .7s ease .85s both}
+#intro .in-tag{margin-top:8px;text-align:center;font-size:clamp(.7rem,3.2vw,.95rem);letter-spacing:.14em;text-transform:uppercase;color:#CBD6EA;animation:introIn .7s ease .85s both}
 @keyframes introIn{from{opacity:0;transform:translateY(18px) scale(.95)}to{opacity:1;transform:none}}
 @keyframes introLine{to{width:min(220px,50vw)}}
 @keyframes introMid{to{opacity:0;transform:scale(1.06)}}
@@ -528,7 +529,7 @@ var MENU = [
   {id:"chapati", cat:"chapati", name:"Chapati", price:2.5, img:3, desc:"Soft, flaky, golden chapati. Priced each.", unit:"each"},
   {id:"kisinia", cat:"fish", name:"Kisinia", price:20, img:5, desc:"Fried fish with tomato pepper sauce and shrimp, served with your choice of side. The price depends on the fish you pick.",
     fish:{label:"What type of fish?", values:[{name:"Mackerel",price:20,img:7},{name:"Pompano",price:32,img:8},{name:"Drum fish",price:40,img:9},{name:"Tilapia",price:30,img:10}]},
-    options:{label:"Choose your sides (pick one or more)", values:["2 chapatis","Fried cassava","Fries","Extra shrimp"], extra:{"Extra shrimp":6}}}
+    options:{label:"Choose your sides (1 included, +$2.00 for each more)", values:["2 chapatis","Fried cassava","Fries","Extra shrimp"], extra:{"Extra shrimp":6}, more:2}}
 ];
 // Scrolling banner: built from the menu and repeated so it always fills the screen, even on wide monitors.
 (function(){
@@ -561,7 +562,14 @@ function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&am
 function find(id){return MENU.filter(function(m){return m.id===id;})[0];}
 function save(){ try{localStorage.setItem("snssg-cart",JSON.stringify(cart));}catch(e){} }
 // Price of one of a cart line. Dishes with a choice of fish are priced by the fish picked (Mackerel if none is set).
-function sideExtra(m,opt){ if(!m.options||!m.options.extra||!opt) return 0; return opt.split(", ").reduce(function(s,x){ return s+(m.options.extra[x]||0); },0); }
+// Extra shrimp costs its own price. The first real side is included; every further side costs "more" dollars.
+function sideExtra(m,opt){
+  if(!m.options||!opt) return 0;
+  var ex=m.options.extra||{}, sides=0, sum=0;
+  opt.split(", ").forEach(function(x){ if(ex[x]) sum+=ex[x]; else sides++; });
+  if(m.options.more&&sides>1) sum+=(sides-1)*m.options.more;
+  return sum;
+}
 function unitPrice(l){ var m=find(l.id), base=m.price; if(m.fish){ var f=m.fish.values.filter(function(v){return v.name===l.fish;})[0]||m.fish.values[0]; base=f.price; } return base+sideExtra(m,l.opt); }
 function total(){return cart.reduce(function(s,l){return s+unitPrice(l)*l.qty;},0);}
 function count(){return cart.reduce(function(s,l){return s+l.qty;},0);}
@@ -954,7 +962,7 @@ function fly(r,src){
 function confetti(){
   if(reduceMotion()||!document.body.animate) return;
   var box=document.createElement("div"); box.className="conf"; box.setAttribute("aria-hidden","true");
-  var cols=["#F0A91F","#C23B22","#17372B","#F4B740","#7DB4F5","#FFFFFF"];
+  var cols=["#F0B323","#C23B22","#12306E","#F4C240","#7DB4F5","#FFFFFF"];
   for(var i=0;i<70;i++){
     var b=document.createElement("b");
     b.style.left=(Math.random()*100)+"vw"; b.style.background=cols[i%cols.length];

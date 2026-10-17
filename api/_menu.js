@@ -8,7 +8,7 @@ const MENU = {
   chapati: { name: "Chapati", cents: 250 },
   // Kisinia is priced by the fish picked; the first one (Mackerel) is the default.
   kisinia: {
-    name: "Kisinia", cents: 2000, options: ["2 chapatis", "Fried cassava", "Fries", "Extra shrimp"], extras: { "Extra shrimp": 600 },
+    name: "Kisinia", cents: 2000, options: ["2 chapatis", "Fried cassava", "Fries", "Extra shrimp"], extras: { "Extra shrimp": 600 }, moreSide: 200, // first side included; each further side is $2
     fish: [{ name: "Mackerel", cents: 2000 }, { name: "Pompano", cents: 3200 }, { name: "Drum fish", cents: 4000 }, { name: "Tilapia", cents: 3000 }],
   },
 };
@@ -49,6 +49,8 @@ function priceOrder(items) {
       if (picked.length === 0 || !picked.every((x) => m.options.includes(x)) || !picked.some((x) => !(x in extras))) throw new UserError("Please choose a side for " + m.name + ".");
       opt = m.options.filter((x) => picked.includes(x)).join(", ");
       unitCents += opt.split(", ").reduce((sum, x) => sum + (extras[x] || 0), 0);
+      const sides = opt.split(", ").filter((x) => !(x in extras)).length;
+      if (sides > 1) unitCents += (sides - 1) * (m.moreSide || 0);
     }
     const note = clean(it.note, 120);
     let label = m.name + (fishName ? " - " + fishName : "") + (opt ? " (" + opt + ")" : "") + (note ? " - Note: " + note : "");
