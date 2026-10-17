@@ -11,6 +11,7 @@ const MENU = {
     name: "Kisinia", cents: 2000, options: ["2 chapatis", "Fried cassava", "Fries"],
     fish: [{ name: "Mackerel", cents: 2000 }, { name: "Pompano", cents: 3200 }, { name: "Drum fish", cents: 4000 }, { name: "Tilapia", cents: 3000 }],
   },
+  shrimp: { name: "Extra shrimp", cents: 600 },
 };
 
 // One place for the shop name used in texts, emails and the courier booking. Change it with SHOP_NAME in Vercel.
