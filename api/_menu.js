@@ -8,10 +8,9 @@ const MENU = {
   chapati: { name: "Chapati", cents: 250 },
   // Kisinia is priced by the fish picked; the first one (Mackerel) is the default.
   kisinia: {
-    name: "Kisinia", cents: 2000, options: ["2 chapatis", "Fried cassava", "Fries"],
+    name: "Kisinia", cents: 2000, options: ["2 chapatis", "Fried cassava", "Fries", "Extra shrimp"], extras: { "Extra shrimp": 600 },
     fish: [{ name: "Mackerel", cents: 2000 }, { name: "Pompano", cents: 3200 }, { name: "Drum fish", cents: 4000 }, { name: "Tilapia", cents: 3000 }],
   },
-  shrimp: { name: "Extra shrimp", cents: 600 },
 };
 
 // One place for the shop name used in texts, emails and the courier booking. Change it with SHOP_NAME in Vercel.
@@ -45,8 +44,11 @@ function priceOrder(items) {
     if (m.options) {
       // Customers can pick one or more sides, sent as "A, B". Each must be on the menu; rebuilt in menu order.
       const picked = Array.from(new Set(clean(it.opt, 100).split(",").map((x) => x.trim()).filter(Boolean)));
-      if (picked.length === 0 || !picked.every((x) => m.options.includes(x))) throw new UserError("Please choose a side for " + m.name + ".");
+      const extras = m.extras || {};
+      // Every pick must be on the menu, and at least one must be a real side (Extra shrimp alone does not count).
+      if (picked.length === 0 || !picked.every((x) => m.options.includes(x)) || !picked.some((x) => !(x in extras))) throw new UserError("Please choose a side for " + m.name + ".");
       opt = m.options.filter((x) => picked.includes(x)).join(", ");
+      unitCents += opt.split(", ").reduce((sum, x) => sum + (extras[x] || 0), 0);
     }
     const note = clean(it.note, 120);
     let label = m.name + (fishName ? " - " + fishName : "") + (opt ? " (" + opt + ")" : "") + (note ? " - Note: " + note : "");
