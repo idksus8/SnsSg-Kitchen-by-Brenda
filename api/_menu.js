@@ -14,7 +14,7 @@ const MENU = {
 };
 
 // One place for the shop name used in texts, emails and the courier booking. Change it with SHOP_NAME in Vercel.
-const SHOP_NAME = process.env.SHOP_NAME || "test1";
+const SHOP_NAME = process.env.SHOP_NAME || "SnsSg Kitchen";
 
 const DELIVERY_FEE_CENTS = 499;
 
