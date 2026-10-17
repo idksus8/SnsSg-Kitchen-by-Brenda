@@ -6,6 +6,7 @@ const MENU = {
   beef: { name: "Beef Soup", cents: 2500 },
   mtori: { name: "Beef Mtori (Green Banana Puree)", cents: 2500 },
   chapati: { name: "Chapati", cents: 250 },
+  shrimp: { name: "Extra Shrimp", cents: 600 },
   // Kisinia is priced by the fish picked; the first one (Mackerel) is the default.
   kisinia: {
     name: "Kisinia", cents: 2000, options: ["2 chapatis", "Fried cassava", "Fries"],
