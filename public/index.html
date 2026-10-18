@@ -5,6 +5,9 @@
 <title>SnsSg Kitchen by Brenda | Order online</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Homemade soups, chapati and fried fish by Brenda. Order online.">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preload" as="image" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
@@ -45,6 +48,10 @@ img{max-width:100%;display:block}
 .topbar-in{max-width:1120px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:1.35rem;letter-spacing:-.01em}
 .brand small{font-family:"DM Sans",sans-serif;font-weight:500;font-size:.85rem;opacity:.8;margin-left:6px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-logo{width:42px;height:42px;flex:none;display:block}
+#intro .in-logo{display:block;margin:0 auto 14px;width:clamp(110px,30vw,170px);height:auto;animation:introIn .8s cubic-bezier(.2,.8,.2,1) both}
+.foot-logo{width:30px;height:30px;vertical-align:middle;margin-right:10px}
 .cart-btn{background:var(--saffron);color:#1A1405;border:0;border-radius:999px;padding:9px 16px;font-weight:700;cursor:pointer;display:none;align-items:center;gap:8px}
 .cart-btn .n{background:#1A1405;color:var(--saffron);border-radius:999px;min-width:22px;height:22px;padding:0 6px;display:inline-grid;place-items:center;font-size:.8rem}
 
@@ -365,7 +372,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
 </style>
 </head>
 <body>
-<div id="intro" aria-hidden="true"><div class="in-half in-top"></div><div class="in-half in-bot"></div><div class="in-mid"><div class="in-name">SnsSg Kitchen</div><div class="in-line"></div><div class="in-by">by Brenda</div><div class="in-tag">Authentic Flavor &middot; Made with Love</div></div></div>
+<div id="intro" aria-hidden="true"><div class="in-half in-top"></div><div class="in-half in-bot"></div><div class="in-mid"><img class="in-logo" src="/logo.png" alt=""><div class="in-name">SnsSg Kitchen</div><div class="in-line"></div><div class="in-by">by Brenda</div><div class="in-tag">Authentic Flavor &middot; Made with Love</div></div></div>
 <script>
 (function(){
   var el=document.getElementById("intro"); if(!el) return;
@@ -379,7 +386,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
 
 <header class="topbar">
   <div class="topbar-in">
-    <div class="brand">SnsSg Kitchen <small>by Brenda</small></div>
+    <div class="brand"><img class="brand-logo" src="/logo.png" alt="" width="42" height="42"><span>SnsSg Kitchen <small>by Brenda</small></span></div>
     <div class="tb-r"><button class="acct-btn" id="acctBtn" type="button" hidden>Log in</button><button class="acct-btn" id="signBtn" type="button" hidden>Sign up</button><button class="cart-btn" id="cartTop" type="button" aria-label="Open your order">Your order <span class="n" id="cartTopN">0</span></button></div>
   </div>
 </header>
@@ -457,7 +464,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
   <button class="btn" id="mbarBtn" type="button">View order (<span class="dv" id="mbN">0</span>) <span class="dv" id="mbT">$0.00</span></button>
 </div>
 
-<footer class="foot"><div>SnsSg Kitchen by Brenda. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 2</small></div></footer>
+<footer class="foot"><div><img class="foot-logo" src="/logo.png" alt="" width="30" height="30">SnsSg Kitchen by Brenda. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 2</small></div></footer>
 <dialog id="confirmDlg" aria-labelledby="cfH">
   <div class="dlg-body">
     <h2 id="cfH">Are you sure?</h2>
