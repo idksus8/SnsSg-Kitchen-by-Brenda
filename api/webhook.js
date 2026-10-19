@@ -3,6 +3,7 @@ const { notify } = require("./_notify");
 const { buildText } = require("./_text");
 const { enabled, saveOrder } = require("./_supabase");
 const { dispatchLink } = require("./_uber");
+const sheet = require("./_sheet");
 const { SHOP_NAME } = require("./_menu");
 
 async function rawBody(req) {
@@ -45,6 +46,17 @@ module.exports = async (req, res) => {
             total_cents: session.amount_total,
           });
         } catch (e) { console.error("save order error", e && e.message); }
+      }
+      if (sheet.enabled()) {
+        // Add the order to the spreadsheet. A failure here is logged but never blocks the text to Brenda.
+        try {
+          const m = session.metadata || {};
+          await sheet.logOrder({
+            id: session.id, name: m.name, phone: m.phone, mode: m.mode, addr: m.addr, when: m.when, note: m.note,
+            lines: items.data.map((l) => ({ label: l.description, qty: l.quantity })),
+            totalCents: session.amount_total, paidBy: "Card / Apple Pay",
+          });
+        } catch (e) { console.error("spreadsheet error", e && e.message); }
       }
       const md2 = session.metadata || {};
       const link = md2.mode === "Delivery" ? dispatchLink(process.env.SITE_URL || "https://" + req.headers.host, session.id) : "";

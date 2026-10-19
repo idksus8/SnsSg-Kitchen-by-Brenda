@@ -11,6 +11,7 @@ const { enabled, bearer, userFromToken, saveOrder, countSince, findDuplicate } =
 // Most Zelle order alerts we will send in one hour, so a flood of fake orders cannot bury Brenda in texts.
 const MAX_ZELLE_PER_HOUR = 20;
 const crypto = require("crypto");
+const sheet = require("./_sheet");
 
 function money(cents) { return "$" + (cents / 100).toFixed(2); }
 
@@ -75,11 +76,21 @@ module.exports = async (req, res) => {
       console.error("zelle order not delivered: alerts set up = " + r.configured);
       return res.status(500).json({ error: "We could not send your order to Brenda. Please try again or contact her directly." });
     }
+    const orderId = "zelle_" + crypto.randomUUID();
+    if (sheet.enabled()) {
+      // Add it to the spreadsheet too, marked so Brenda knows to check her Zelle. Never blocks the order.
+      try {
+        await sheet.logOrder({
+          id: orderId, name: c.name, phone: c.phone, mode: c.mode, addr: c.addr, when: c.when, note: c.note,
+          lines: lines.map((l) => ({ label: l.label, qty: l.qty })), totalCents: total, paidBy: "Zelle (check payment)",
+        });
+      } catch (e) { console.error("spreadsheet error", e && e.message); }
+    }
     if (enabled()) {
       // Best effort: a problem saving history never blocks the order alert Brenda already got.
       try {
         await saveOrder({
-          stripe_session_id: "zelle_" + crypto.randomUUID(),
+          stripe_session_id: orderId,
           user_id: user ? user.id : null,
           email: user ? user.email || null : null,
           name: c.name, phone: c.phone, mode: c.mode, addr: c.addr || null, when_text: c.when || null, note: c.note || null,
