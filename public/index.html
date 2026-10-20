@@ -460,7 +460,9 @@ dialog[open]::backdrop{animation:fade .25s ease}
     <a href="#soups">Soups</a>
     <a href="#chapati">Chapati</a>
     <a href="#fish">Fish and shrimp</a>
-    <a href="#street">Street food</a>
+    <a href="#zege">Zege</a>
+    <a href="#urojo">Urojo</a>
+    <a href="#vitumbua">Vitumbua</a>
   </div>
 </nav>
 
@@ -486,9 +488,17 @@ dialog[open]::backdrop{animation:fade .25s ease}
       <h2>Fish and shrimp</h2>
       <div class="items" id="list-fish"></div>
     </section>
-    <section class="section" id="street">
-      <h2>Street food</h2>
-      <div class="items" id="list-street"></div>
+    <section class="section" id="zege">
+      <h2>Zege</h2>
+      <div class="items" id="list-zege"></div>
+    </section>
+    <section class="section" id="urojo">
+      <h2>Urojo</h2>
+      <div class="items" id="list-urojo"></div>
+    </section>
+    <section class="section" id="vitumbua">
+      <h2>Vitumbua</h2>
+      <div class="items" id="list-vitumbua"></div>
     </section>
   </div>
 
@@ -502,7 +512,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
   <button class="btn" id="mbarBtn" type="button">View order (<span class="dv" id="mbN">0</span>) <span class="dv" id="mbT">$0.00</span></button>
 </div>
 
-<footer class="foot"><div><img class="foot-logo" src="/logo.png" alt="" width="30" height="30">SnsSg Kitchen by Brenda. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 3</small></div></footer>
+<footer class="foot"><div><img class="foot-logo" src="/logo.png" alt="" width="30" height="30">SnsSg Kitchen by Brenda. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 4</small></div></footer>
 <dialog id="confirmDlg" aria-labelledby="cfH">
   <div class="dlg-body">
     <h2 id="cfH">Are you sure?</h2>
@@ -570,10 +580,10 @@ var MENU = [
   {id:"kisinia", cat:"fish", name:"Kisinia", price:20, img:5, desc:"Fried fish with tomato pepper sauce and shrimp, served with your choice of side. The price depends on the fish you pick.",
     fish:{label:"What type of fish?", values:[{name:"Mackerel",price:20,img:7},{name:"Pompano",price:32,img:8},{name:"Drum fish",price:40,img:9},{name:"Tilapia",price:30,img:10}]},
     options:{label:"Choose your sides (1 included, +$2.00 for each more)", values:["2 chapatis","Fried cassava","Fries","Extra shrimp"], extra:{"Extra shrimp":6}, more:2}},
-  {id:"zege", cat:"street", name:"Zege (Fries in Eggs)", price:10, img:11, desc:"Crispy fries cooked into a golden egg omelet."},
-  {id:"urojo", cat:"street", name:"Urojo", price:18, img:12, desc:"Zanzibar-style mix: a tangy golden soup with fritters, beef bites and toppings."},
+  {id:"zege", cat:"zege", name:"Zege (Fries in Eggs)", price:10, img:11, desc:"Crispy fries cooked into a golden egg omelet."},
+  {id:"urojo", cat:"urojo", name:"Urojo", price:18, img:12, desc:"Zanzibar-style mix: a tangy golden soup with fritters, beef bites and toppings."},
   // Vitumbua is sold by the dozen, plain or coconut at the same price. It reuses the one-choice list that the fish use.
-  {id:"vitumbua", cat:"street", name:"Vitumbua (Dozen)", price:18, img:13, desc:"A dozen soft, golden Swahili rice muffins. Choose plain or coconut.",
+  {id:"vitumbua", cat:"vitumbua", name:"Vitumbua (Dozen)", price:18, img:13, desc:"A dozen soft, golden Swahili rice muffins. Choose plain or coconut.",
     fish:{label:"Which kind?", values:[{name:"Plain",price:18,img:13},{name:"Coconut",price:18,img:13}]}}
 ];
 // Scrolling banner: built from the menu and repeated so it always fills the screen, even on wide monitors.
@@ -804,7 +814,7 @@ MENU.forEach(function(m){ $("list-"+m.cat).appendChild(makeCard(m,"card")); });
 // ---- Header shadow and active menu tab
 (function(){
   var top=document.querySelector(".topbar"), links=document.querySelectorAll(".cats a");
-  var secs=["favs","soups","chapati","fish","street"].map(function(id){ return $(id); });
+  var secs=["favs","soups","chapati","fish","zege","urojo","vitumbua"].map(function(id){ return $(id); });
   var ticking=false;
   function upd(){
     top.classList.toggle("scrolled", window.scrollY>8);
@@ -1682,7 +1692,7 @@ function pay(){
     });
 }
 
-["list-soups","list-chapati","list-fish","list-street"].forEach(function(id){ initDials($(id),"card","fresh"); });
+["list-soups","list-chapati","list-fish","list-zege","list-urojo","list-vitumbua"].forEach(function(id){ initDials($(id),"card","fresh"); });
 syncFavs();
 render();
 (function(){
