@@ -512,7 +512,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
   <button class="btn" id="mbarBtn" type="button">View order (<span class="dv" id="mbN">0</span>) <span class="dv" id="mbT">$0.00</span></button>
 </div>
 
-<footer class="foot"><div><img class="foot-logo" src="/logo.png" alt="" width="30" height="30">SnsSg Kitchen by Brenda. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 4</small></div></footer>
+<footer class="foot"><div><img class="foot-logo" src="/logo.png" alt="" width="30" height="30">SnsSg Kitchen by Brenda. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 5</small></div></footer>
 <dialog id="confirmDlg" aria-labelledby="cfH">
   <div class="dlg-body">
     <h2 id="cfH">Are you sure?</h2>
@@ -813,17 +813,38 @@ MENU.forEach(function(m){ $("list-"+m.cat).appendChild(makeCard(m,"card")); });
 
 // ---- Header shadow and active menu tab
 (function(){
-  var top=document.querySelector(".topbar"), links=document.querySelectorAll(".cats a");
-  var secs=["favs","soups","chapati","fish","zege","urojo","vitumbua"].map(function(id){ return $(id); });
-  var ticking=false;
+  var top=document.querySelector(".topbar"), links=document.querySelectorAll(".cats a"), strip=document.querySelector(".cats-in");
+  var ids=["favs","soups","chapati","fish","zege","urojo","vitumbua"];
+  var secs=ids.map(function(id){ return $(id); });
+  var ticking=false, lock="", shown="";
+  function lastShown(){ for(var i=secs.length-1;i>=0;i--){ if(secs[i]&&!secs[i].hidden) return secs[i].id; } return ""; }
   function upd(){
     top.classList.toggle("scrolled", window.scrollY>8);
     var cur="";
-    secs.forEach(function(s){ if(!s.hidden&&s.getBoundingClientRect().top<=170) cur=s.id; });
+    secs.forEach(function(s){ if(s&&!s.hidden&&s.getBoundingClientRect().top<=170) cur=s.id; });
+    // At the very bottom the last sections are too short to reach the top of the screen, so the last one stays lit.
+    if(window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-4) cur=lastShown();
+    // A tab you just tapped stays lit until you scroll by hand, even when the page cannot scroll far enough to bring its section to the top.
+    if(lock&&$(lock)&&!$(lock).hidden) cur=lock;
     Array.prototype.forEach.call(links,function(a){ a.classList.toggle("active", a.getAttribute("href")==="#"+cur); });
+    // On narrow screens the tab strip scrolls sideways: keep the lit tab in view.
+    if(cur!==shown){
+      shown=cur;
+      var act=strip&&strip.querySelector("a.active");
+      if(act&&strip.scrollWidth>strip.clientWidth) strip.scrollTo({left:act.offsetLeft-(strip.clientWidth-act.offsetWidth)/2,behavior:"smooth"});
+    }
     ticking=false;
   }
-  window.addEventListener("scroll",function(){ if(!ticking){ ticking=true; requestAnimationFrame(upd); } },{passive:true});
+  function queue(){ if(!ticking){ ticking=true; requestAnimationFrame(upd); } }
+  Array.prototype.forEach.call(links,function(a){
+    a.addEventListener("click",function(){ lock=a.getAttribute("href").slice(1); queue(); });
+  });
+  window.addEventListener("pointerdown",function(e){ if(lock&&e.target===document.documentElement){ lock=""; queue(); } },{passive:true});
+  ["wheel","touchmove","keydown"].forEach(function(ev){ window.addEventListener(ev,function(){ if(lock){ lock=""; queue(); } },{passive:true}); });
+  var h=(location.hash||"").slice(1); if(ids.indexOf(h)>-1) lock=h;
+  window.addEventListener("hashchange",function(){ var x=(location.hash||"").slice(1); if(ids.indexOf(x)>-1){ lock=x; queue(); } });
+  window.addEventListener("scroll",queue,{passive:true});
+  window.addEventListener("resize",queue);
   upd();
 })();
 
