@@ -6,6 +6,10 @@ const MENU = {
   beef: { name: "Beef Soup", cents: 2500 },
   mtori: { name: "Beef Mtori (Green Banana Puree)", cents: 2500 },
   chapati: { name: "Chapati", cents: 250 },
+  zege: { name: "Zege (Fries in Eggs)", cents: 1000 },
+  urojo: { name: "Urojo", cents: 1800 },
+  // Vitumbua is sold by the dozen, plain or coconut (same price). It uses the same one-choice list as the fish.
+  vitumbua: { name: "Vitumbua (Dozen)", cents: 1800, fish: [{ name: "Plain", cents: 1800 }, { name: "Coconut", cents: 1800 }] },
   // Kisinia is priced by the fish picked; the first one (Mackerel) is the default.
   kisinia: {
     name: "Kisinia", cents: 2000, options: ["2 chapatis", "Fried cassava", "Fries", "Extra shrimp"], extras: { "Extra shrimp": 600 }, moreSide: 200, // first side included; each further side is $2
@@ -37,7 +41,7 @@ function priceOrder(items) {
     if (m.fish) {
       const want = clean(it.fish, 40);
       const f = want ? m.fish.find((x) => x.name === want) : m.fish[0];
-      if (!f) throw new UserError("Please choose a type of fish for " + m.name + ".");
+      if (!f) throw new UserError("Please choose an option for " + m.name + ".");
       fishName = f.name; unitCents = f.cents;
     }
     let opt = "";
