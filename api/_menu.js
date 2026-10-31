@@ -14,12 +14,12 @@ const MENU = {
   // Mishikaki (beef skewers): by the skewer, or a half pan with a side.
   mishikaki: { name: "Mishikaki (Beef Skewers)", cents: 300, fish: [{ name: "Single skewer", cents: 300 }, { name: "Half pan with fries", cents: 3000 }, { name: "Half pan with plantain", cents: 3500 }, { name: "Half pan with boiled cassava", cents: 3500 }, { name: "Half pan with fried cassava", cents: 3500 }] },
   salmon: { name: "Salmon", cents: 2800, fish: [{ name: "Grilled", cents: 2800 }, { name: "With mashed potatoes and mixed veggies", cents: 3500 }] },
-  samosa: { name: "Samosa and Chapati", cents: 1200 },
+  samosa: { name: "Samosa (Dozen)", cents: 1800 },
   // Grilled fish uses the same fish and prices as Kisinia.
   grillfish: { name: "Grilled Fish", cents: 2000, fish: [{ name: "Mackerel", cents: 2000 }, { name: "Pompano", cents: 3200 }, { name: "Drum fish", cents: 4000 }, { name: "Tilapia", cents: 3000 }] },
   friedrice: { name: "Fried Rice", cents: 1500 },
   zobo: { name: "Zobo (Hibiscus Drink)", cents: 800, fish: [{ name: "Sweet", cents: 800 }, { name: "Unsweetened", cents: 800 }] },
-  turkey: { name: "Grilled Turkey Wings", cents: 2200 },
+  turkey: { name: "Grilled Turkey Legs (2)", cents: 2200 },
   // Kisinia is priced by the fish picked; the first one (Mackerel) is the default.
   kisinia: {
     name: "Kisinia", cents: 2000, options: ["2 chapatis", "Fried cassava", "Fries", "Extra shrimp"], extras: { "Extra shrimp": 600 }, moreSide: 200, // first side included; each further side is $2
