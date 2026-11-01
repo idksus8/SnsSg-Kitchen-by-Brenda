@@ -7,7 +7,8 @@ const MENU = {
   beef: { name: "Beef Soup", cents: 2500, fish: [{ name: "Soup only", cents: 2500 }, { name: "With chapati", cents: 3000 }] },
   mtori: { name: "Beef Mtori (Green Banana Puree)", cents: 2500 },
   chapati: { name: "Chapati", cents: 250 },
-  zege: { name: "Zege (Fries in Eggs)", cents: 1000 },
+  // Zege: on its own, or with 2 mishikaki skewers.
+  zege: { name: "Zege (Fries in Eggs)", cents: 1500, fish: [{ name: "Zege only", cents: 1500 }, { name: "With 2 mishikaki", cents: 2000 }] },
   urojo: { name: "Urojo", cents: 1800 },
   // Vitumbua is sold by the dozen, plain or coconut (same price). It uses the same one-choice list as the fish.
   vitumbua: { name: "Vitumbua (Dozen)", cents: 1800, fish: [{ name: "Plain", cents: 1800 }, { name: "Coconut", cents: 1800 }] },
