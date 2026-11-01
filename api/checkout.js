@@ -1,6 +1,6 @@
 const Stripe = require("stripe");
 const { enabled, bearer, userFromToken } = require("./_supabase");
-const { priceOrder, validateCustomer, withDelivery, UserError } = require("./_menu");
+const { priceOrder, validateCustomer, withDelivery, UserError, TERMS_VERSION } = require("./_menu");
 const { feeFor } = require("./_uber");
 const { limited, tooMany } = require("./_guard");
 const { verifyPhone } = require("./_phone");
@@ -10,6 +10,8 @@ module.exports = async (req, res) => {
   if (limited(req, "checkout", 10, 10 * 60 * 1000)) return tooMany(res);
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+    // The customer must have ticked the box agreeing to the Terms of Sale and Privacy Policy.
+    if (body.agreed !== true) return res.status(400).json({ error: "Please tick the box to agree to the Terms of Sale and Privacy Policy. If you do not see it, refresh the page." });
     const priced = priceOrder(body.items);
     const c = validateCustomer(body.customer);
     await verifyPhone(c.phone);
@@ -42,7 +44,7 @@ module.exports = async (req, res) => {
         quantity: l.qty,
         price_data: { currency: "usd", unit_amount: l.unitCents, product_data: { name: l.label } },
       })),
-      metadata: Object.assign({ name: c.name, phone: c.phone, mode: c.mode, addr: c.addr, when: c.when, note: c.note }, user ? { user_id: user.id } : {}),
+      metadata: Object.assign({ name: c.name, phone: c.phone, mode: c.mode, addr: c.addr, when: c.when, note: c.note, terms: TERMS_VERSION }, user ? { user_id: user.id } : {}),
       ...(user && user.email ? { customer_email: user.email } : {}),
       success_url: origin + "/?paid=1",
       cancel_url: origin + "/",

@@ -85,6 +85,12 @@ img{max-width:100%;display:block}
 .fav.pop::after{animation:starRing .6s ease-out}
 @keyframes starPop{0%{transform:scale(.4) rotate(-90deg)}55%{transform:scale(1.4) rotate(20deg)}100%{transform:scale(1) rotate(0)}}
 @keyframes starRing{0%{transform:scale(.8);opacity:.9}100%{transform:scale(2.2);opacity:0}}
+
+.agree{display:flex;gap:10px;align-items:flex-start;font-size:.92rem;line-height:1.45;cursor:pointer}
+.agree input{width:22px;height:22px;flex:0 0 22px;margin-top:1px;accent-color:var(--green)}
+.agree a{color:inherit}
+.foot-links{margin-top:8px;font-size:.9rem}
+.foot-links a{color:inherit;margin-right:16px;text-decoration:underline}
 @media (prefers-reduced-motion: reduce){.fav.pop svg,.fav.pop::after{animation:none}}
 .flystar{position:fixed;z-index:9999;width:30px;height:30px;pointer-events:none;filter:drop-shadow(0 0 7px rgba(255,198,26,.95))}
 .flystar svg{width:100%;height:100%;fill:#ffc61a;stroke:#e0a100;stroke-width:2;stroke-linejoin:round}
@@ -547,7 +553,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
   <button class="btn" id="mbarBtn" type="button">View order (<span class="dv" id="mbN">0</span>) <span class="dv" id="mbT">$0.00</span></button>
 </div>
 
-<footer class="foot"><div><img class="foot-logo" src="/logo.png" alt="" width="30" height="30">SnsSg Kitchen by Brenda. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 7</small></div></footer>
+<footer class="foot"><div><img class="foot-logo" src="/logo.png" alt="" width="30" height="30">SnsSg Kitchen by Brenda. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 8</small><div class="foot-links"><a href="/terms.html">Terms of Sale</a><a href="/privacy.html">Privacy Policy</a><a href="/terms.html#allergens">Allergens</a></div></div></footer>
 <dialog id="confirmDlg" aria-labelledby="cfH">
   <div class="dlg-body">
     <h2 id="cfH">Are you sure?</h2>
@@ -1270,6 +1276,8 @@ function openDetails(){
    '<div class="row"><span>Subtotal</span><span class="dv" data-k="sub" data-t="'+money(total())+'"></span></div>'+
    '<div class="collapse" id="feeRow" inert><div><div class="row"><span>Delivery fee</span><span class="dv" id="coFee" data-k="fee" data-t="'+money(DELIVERY_FEE)+'"></span></div></div></div>'+
    '<div class="row"><strong>Total</strong><strong id="coTotal" class="dv" data-k="total" data-t="'+money(total())+'"></strong></div>'+
+   '<label class="agree"><input type="checkbox" id="cAgree"> <span>I agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Sale</a> and <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>, and I have read the <a href="/terms.html#allergens" target="_blank" rel="noopener">allergen notice</a>.</span></label>'+
+   '<p class="fine" style="padding:0">Food allergy? Tell us in the notes box before you pay. We cannot guarantee any dish is free of allergens.</p>'+
    '<p class="err" id="cErr" role="alert"></p>'+
    '<button class="btn" type="button" id="cGo">Pay Now</button>'+
    (ZELLE_TO?'<button class="btn alt" type="button" id="zGo">Pay with Zelle</button>':'')+
@@ -1658,6 +1666,7 @@ function readDetails(){
   } else {
     d.when=fmtLong(parseYmd(w.getAttribute("data-date"))); d.whenDate=w.getAttribute("data-date");
   }
+  if(!$("cAgree").checked){ $("cErr").textContent="Please tick the box to agree to the Terms of Sale and Privacy Policy."; $("cAgree").focus(); return null; }
   return d;
 }
 // ---- Pay with Zelle: shows Brenda's Zelle details, then sends her the order text once the customer says they paid.
@@ -1714,7 +1723,7 @@ function zelleShow(d){
     busy=true; var b=$("zSent"); b.disabled=true; b.textContent="Sending your order..."; $("zErr").textContent="";
     (SES?token():Promise.resolve("")).then(function(t){
       var h={"Content-Type":"application/json"}; if(t) h.Authorization="Bearer "+t;
-      return fetch("/api/zelle",{method:"POST",headers:h,body:JSON.stringify({items:items,customer:d,quote:(d.mode==="Delivery"&&QUOTE.addr===d.addr)?QUOTE.token:"",expected:cents(amt)})});
+      return fetch("/api/zelle",{method:"POST",headers:h,body:JSON.stringify({items:items,customer:d,agreed:true,quote:(d.mode==="Delivery"&&QUOTE.addr===d.addr)?QUOTE.token:"",expected:cents(amt)})});
     })
       .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,st:r.status,j:j}; }); })
       .then(function(x){
@@ -1740,7 +1749,7 @@ function pay(){
   if(busy) return;
   var d=readDetails(); if(!d) return;
   busy=true; $("cGo").disabled=true; $("cGo").classList.add("loading"); $("cGo").textContent="Opening secure checkout..."; $("cErr").textContent="";
-  var payload={items:cart.map(function(l){return {id:l.id,qty:l.qty,fish:l.fish||"",opt:l.opt,note:l.note};}),customer:d,quote:(d.mode==="Delivery"&&QUOTE.addr===d.addr)?QUOTE.token:"",expected:cents(total()+(d.mode==="Delivery"?DELIVERY_FEE:0))};
+  var payload={items:cart.map(function(l){return {id:l.id,qty:l.qty,fish:l.fish||"",opt:l.opt,note:l.note};}),customer:d,agreed:true,quote:(d.mode==="Delivery"&&QUOTE.addr===d.addr)?QUOTE.token:"",expected:cents(total()+(d.mode==="Delivery"?DELIVERY_FEE:0))};
   var wasIn=!!SES;
   token().then(function(t){
     if(wasIn&&!t){ var ex=new Error("Your login expired. Please log in again or continue as guest."); ex.auth=true; throw ex; }

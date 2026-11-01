@@ -99,4 +99,7 @@ function withDelivery(lines, mode, feeCents) {
   return lines.concat([{ label: "Delivery fee", qty: 1, unitCents: Number.isInteger(feeCents) ? feeCents : DELIVERY_FEE_CENTS }]);
 }
 
-module.exports = { SHOP_NAME, MENU, UserError, priceOrder, validateCustomer, clean, withDelivery, DELIVERY_FEE_CENTS };
+// Version of the Terms and Privacy Policy the customer agreed to at checkout (the date shown at the top of those pages).
+const TERMS_VERSION = "2026-10-31";
+
+module.exports = { TERMS_VERSION, SHOP_NAME, MENU, UserError, priceOrder, validateCustomer, clean, withDelivery, DELIVERY_FEE_CENTS };

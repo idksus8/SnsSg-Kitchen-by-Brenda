@@ -5,7 +5,7 @@ const { priceOrder, validateCustomer, withDelivery, UserError } = require("./_me
 const { feeFor } = require("./_uber");
 const { limited, tooMany } = require("./_guard");
 const { normalizePhone } = require("./_phone");
-const { SHOP_NAME } = require("./_menu");
+const { SHOP_NAME, TERMS_VERSION } = require("./_menu");
 const { enabled, bearer, userFromToken, saveOrder, countSince, findDuplicate } = require("./_supabase");
 
 // Most Zelle order alerts we will send in one hour, so a flood of fake orders cannot bury Brenda in texts.
@@ -20,6 +20,7 @@ module.exports = async (req, res) => {
   if (limited(req, "zelle", 5, 10 * 60 * 1000)) return tooMany(res);
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+    if (body.agreed !== true) return res.status(400).json({ error: "Please tick the box to agree to the Terms of Sale and Privacy Policy. If you do not see it, refresh the page." });
     const priced = priceOrder(body.items);
     const c = validateCustomer(body.customer);
     normalizePhone(c.phone); // instant format-only backstop (no lookup); the real check already ran when the customer tapped Pay with Zelle
@@ -70,6 +71,7 @@ module.exports = async (req, res) => {
     parts.push("Name: " + c.name);
     parts.push("Phone: " + c.phone);
     if (c.note) parts.push("Notes: " + c.note);
+    parts.push("Agreed to terms: " + TERMS_VERSION);
 
     const r = await notify("New Zelle order - " + SHOP_NAME, parts.join("\n").slice(0, 1500));
     if (!r.sent) {
