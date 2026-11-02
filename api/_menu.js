@@ -21,7 +21,7 @@ const MENU = {
   friedrice: { name: "Fried Rice", cents: 1500 },
   // Thanksgiving package: Thursday Nov 26, 2026 only, and only 15 in the first batch (see _package.js).
   thanksgiving: { name: "Thanksgiving Family Package", cents: 13500, fish: [{ name: "Garlic Lemon Pepper", cents: 13500 }, { name: "Suya Spices (may contain peanuts)", cents: 13500 }, { name: "Jalapeño", cents: 13500 }] },
-  zobo: { name: "Zobo (Hibiscus Drink)", cents: 1200, fish: [{ name: "16 oz - Sweet", cents: 1200 }, { name: "16 oz - Unsweetened", cents: 1200 }, { name: "1 gallon - Sweet", cents: 3500 }, { name: "1 gallon - Unsweetened", cents: 3000 }] },
+  zobo: { name: "Zobo (Hibiscus Drink)", cents: 800, fish: [{ name: "8 oz - Sweet", cents: 800 }, { name: "8 oz - Unsweetened", cents: 800 }, { name: "16 oz - Sweet", cents: 1200 }, { name: "16 oz - Unsweetened", cents: 1200 }, { name: "1 gallon - Sweet", cents: 3500 }, { name: "1 gallon - Unsweetened", cents: 3000 }] },
   turkey: { name: "Grilled Turkey Legs (2)", cents: 2200 },
   // Kisinia is priced by the fish picked; the first one (Mackerel) is the default.
   kisinia: {
