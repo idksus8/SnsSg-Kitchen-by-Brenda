@@ -19,7 +19,7 @@ const MENU = {
   // Grilled fish uses the same fish and prices as Kisinia.
   grillfish: { name: "Grilled Fish", cents: 2000, fish: [{ name: "Mackerel", cents: 2000 }, { name: "Pompano", cents: 3200 }, { name: "Drum fish", cents: 4000 }, { name: "Tilapia", cents: 3000 }] },
   friedrice: { name: "Fried Rice", cents: 1500 },
-  zobo: { name: "Zobo (Hibiscus Drink)", cents: 800, fish: [{ name: "Sweet", cents: 800 }, { name: "Unsweetened", cents: 800 }] },
+  zobo: { name: "Zobo (Hibiscus Drink)", cents: 1200, fish: [{ name: "16 oz - Sweet", cents: 1200 }, { name: "16 oz - Unsweetened", cents: 1200 }, { name: "1 gallon - Sweet", cents: 3500 }, { name: "1 gallon - Unsweetened", cents: 3000 }] },
   turkey: { name: "Grilled Turkey Legs (2)", cents: 2200 },
   // Kisinia is priced by the fish picked; the first one (Mackerel) is the default.
   kisinia: {
