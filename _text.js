@@ -1,0 +1,26 @@
+// Builds the order text that is sent to Brenda.
+const { SHOP_NAME } = require("./_menu");
+function money(cents) { return "$" + (cents / 100).toFixed(2); }
+
+function buildText(session, lineItems, dispatchUrl) {
+  const md = session.metadata || {};
+  const lines = lineItems.map((l) => l.quantity + " x " + l.description + " - " + money(l.amount_total));
+  const parts = [
+    "NEW PAID ORDER - " + SHOP_NAME,
+    "",
+    lines.join("\n"),
+    "",
+    "Total paid: " + money(session.amount_total),
+    (md.mode || "Pickup") + (md.mode === "Delivery" && md.addr ? ": " + md.addr : ""),
+  ];
+  if (md.when) parts.push("Wanted: " + md.when);
+  parts.push("Name: " + (md.name || "n/a"));
+  parts.push("Phone: " + (md.phone || "n/a"));
+  if (md.note) parts.push("Notes: " + md.note);
+  const email = session.customer_details && session.customer_details.email;
+  if (email) parts.push("Email: " + email);
+  if (dispatchUrl) parts.push("", "Food ready? Tap to send an Uber courier:", dispatchUrl);
+  return parts.join("\n").slice(0, 1800);
+}
+
+module.exports = { buildText, money };
