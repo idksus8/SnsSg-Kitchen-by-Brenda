@@ -62,4 +62,13 @@ async function findDuplicate(phone, totalCents, sinceIso) {
   return Array.isArray(rows) && rows.length > 0;
 }
 
-module.exports = { enabled, bearer, userFromToken, saveOrder, listOrders, countSince, findDuplicate };
+// Total quantity of saved order lines whose label starts with `prefix`, since a date.
+async function sumItems(prefix, sinceIso) {
+  const r = await fetch(base() + "/rest/v1/orders?select=items&limit=1000&created_at=gte." + encodeURIComponent(sinceIso), { headers: hdr(process.env.SUPABASE_SERVICE_KEY) });
+  if (!r.ok) throw new Error("sum items " + r.status);
+  let n = 0;
+  for (const o of await r.json()) for (const it of o.items || []) if (String(it.label).startsWith(prefix)) n += Number(it.qty) || 0;
+  return n;
+}
+
+module.exports = { sumItems, enabled, bearer, userFromToken, saveOrder, listOrders, countSince, findDuplicate };

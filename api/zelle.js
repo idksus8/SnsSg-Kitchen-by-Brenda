@@ -2,6 +2,7 @@
 // The prices are re-checked on the server, just like card checkout. Nothing is charged here.
 const { notify } = require("./_notify");
 const { priceOrder, validateCustomer, withDelivery, UserError } = require("./_menu");
+const { checkPackages } = require("./_package");
 const { feeFor } = require("./_uber");
 const { limited, tooMany } = require("./_guard");
 const { normalizePhone } = require("./_phone");
@@ -22,7 +23,8 @@ module.exports = async (req, res) => {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
     if (body.agreed !== true) return res.status(400).json({ error: "Please tick the box to agree to the Terms of Sale and Privacy Policy. If you do not see it, refresh the page." });
     const priced = priceOrder(body.items);
-    const c = validateCustomer(body.customer);
+    const c = validateCustomer(body.customer, body.items);
+    await checkPackages(body.items);
     normalizePhone(c.phone); // instant format-only backstop (no lookup); the real check already ran when the customer tapped Pay with Zelle
     // The address was already checked and priced when the customer tapped Pay with Zelle, so no lookup happens here.
     const f = c.mode === "Delivery" ? await feeFor(c.addr, body.quote, { lookup: false }) : null;

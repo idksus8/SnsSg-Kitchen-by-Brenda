@@ -1,6 +1,7 @@
 const Stripe = require("stripe");
 const { enabled, bearer, userFromToken } = require("./_supabase");
 const { priceOrder, validateCustomer, withDelivery, UserError, TERMS_VERSION } = require("./_menu");
+const { checkPackages } = require("./_package");
 const { feeFor } = require("./_uber");
 const { limited, tooMany } = require("./_guard");
 const { verifyPhone } = require("./_phone");
@@ -13,7 +14,8 @@ module.exports = async (req, res) => {
     // The customer must have ticked the box agreeing to the Terms of Sale and Privacy Policy.
     if (body.agreed !== true) return res.status(400).json({ error: "Please tick the box to agree to the Terms of Sale and Privacy Policy. If you do not see it, refresh the page." });
     const priced = priceOrder(body.items);
-    const c = validateCustomer(body.customer);
+    const c = validateCustomer(body.customer, body.items);
+    await checkPackages(body.items);
     await verifyPhone(c.phone);
     const f = c.mode === "Delivery" ? await feeFor(c.addr, body.quote) : null;
     const lines = withDelivery(priced.lines, c.mode, f ? f.feeCents : 0);

@@ -19,6 +19,8 @@ const MENU = {
   // Grilled fish uses the same fish and prices as Kisinia.
   grillfish: { name: "Grilled Fish", cents: 2000, fish: [{ name: "Mackerel", cents: 2000 }, { name: "Pompano", cents: 3200 }, { name: "Drum fish", cents: 4000 }, { name: "Tilapia", cents: 3000 }] },
   friedrice: { name: "Fried Rice", cents: 1500 },
+  // Thanksgiving package: Thursday Nov 26, 2026 only, and only 15 in the first batch (see _package.js).
+  thanksgiving: { name: "Thanksgiving Family Package", cents: 13500, fish: [{ name: "Garlic Lemon Pepper", cents: 13500 }, { name: "Suya Spices (may contain peanuts)", cents: 13500 }, { name: "Jalapeño", cents: 13500 }] },
   zobo: { name: "Zobo (Hibiscus Drink)", cents: 1200, fish: [{ name: "16 oz - Sweet", cents: 1200 }, { name: "16 oz - Unsweetened", cents: 1200 }, { name: "1 gallon - Sweet", cents: 3500 }, { name: "1 gallon - Unsweetened", cents: 3000 }] },
   turkey: { name: "Grilled Turkey Legs (2)", cents: 2200 },
   // Kisinia is priced by the fish picked; the first one (Mackerel) is the default.
@@ -43,6 +45,7 @@ function priceOrder(items) {
   if (!Array.isArray(items) || items.length === 0) throw new UserError("Your order is empty.");
   if (items.length > 25) throw new UserError("Too many items in one order. Please split it up.");
   const lines = items.map((it) => {
+    if (it && it.id === PKG_ID && Date.now() >= PKG_END) throw new UserError("The Thanksgiving package is no longer available.");
     const m = MENU[it && it.id];
     if (!m) throw new UserError("One of the items is no longer on the menu. Please refresh the page.");
     const qty = Number(it.qty);
@@ -75,7 +78,7 @@ function priceOrder(items) {
   return { lines, subtotalCents };
 }
 
-function validateCustomer(c) {
+function validateCustomer(c, items) {
   c = c || {};
   const name = clean(c.name, 80);
   const phone = clean(c.phone, 30);
@@ -90,7 +93,10 @@ function validateCustomer(c) {
   const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean(c.whenDate, 10));
   const dt = dm ? new Date(Date.UTC(+dm[1], +dm[2] - 1, +dm[3])) : null;
   const dow = dt && dt.getUTCMonth() === +dm[2] - 1 ? dt.getUTCDay() : -1;
-  if (![5, 6, 0].includes(dow)) throw new UserError("Brenda takes orders for Friday, Saturday and Sunday only. Please refresh the page and choose one of those days.");
+  // An order with the Thanksgiving package is for Thursday Nov 26 only.
+  if (Array.isArray(items) && items.some((i) => i && i.id === PKG_ID)) {
+    if (clean(c.whenDate, 10) !== PKG_DATE) throw new UserError("The Thanksgiving package is only for Thursday, November 26. Please refresh the page and pick that day.");
+  } else if (![5, 6, 0].includes(dow)) throw new UserError("Brenda takes orders for Friday, Saturday and Sunday only. Please refresh the page and choose one of those days.");
   return { name, phone, mode, addr, when, note };
 }
 
@@ -101,6 +107,9 @@ function withDelivery(lines, mode, feeCents) {
 }
 
 // Version of the Terms and Privacy Policy the customer agreed to at checkout (the date shown at the top of those pages).
-const TERMS_VERSION = "2026-10-31";
+const TERMS_VERSION = "2026-11-01";
 
-module.exports = { TERMS_VERSION, SHOP_NAME, MENU, UserError, priceOrder, validateCustomer, clean, withDelivery, DELIVERY_FEE_CENTS };
+const PKG_ID = "thanksgiving", PKG_DATE = "2026-11-26", PKG_LIMIT = 15;
+const PKG_END = Date.UTC(2026, 10, 27, 6, 0, 0); // the end of Nov 26 in Houston
+
+module.exports = { PKG_ID, PKG_DATE, PKG_LIMIT, TERMS_VERSION, SHOP_NAME, MENU, UserError, priceOrder, validateCustomer, clean, withDelivery, DELIVERY_FEE_CENTS };

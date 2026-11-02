@@ -463,6 +463,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
 <nav class="cats" aria-label="Menu sections">
   <div class="cats-in">
     <a href="#favs" id="navFav" hidden>Favorites</a>
+    <a href="#thanksgiving">Thanksgiving</a>
     <a href="#soups">Soups</a>
     <a href="#chapati">Chapati</a>
     <a href="#fish">Fish and shrimp</a>
@@ -488,6 +489,10 @@ dialog[open]::backdrop{animation:fade .25s ease}
     <section class="section" id="favs" hidden>
       <h2>Your favorites</h2>
       <div class="items" id="list-favs"></div>
+    </section>
+    <section class="section" id="thanksgiving">
+      <h2>Thanksgiving</h2>
+      <div class="items" id="list-thanksgiving"></div>
     </section>
     <section class="section" id="soups">
       <h2>Soups</h2>
@@ -553,7 +558,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
   <button class="btn" id="mbarBtn" type="button">View order (<span class="dv" id="mbN">0</span>) <span class="dv" id="mbT">$0.00</span></button>
 </div>
 
-<footer class="foot"><div><img class="foot-logo" src="/logo.png" alt="" width="30" height="30">SnsSg Kitchen by Brenda. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 9</small><div class="foot-links"><a href="/terms.html">Terms of Sale</a><a href="/privacy.html">Privacy Policy</a><a href="/terms.html#allergens">Allergens</a></div></div></footer>
+<footer class="foot"><div><img class="foot-logo" src="/logo.png" alt="" width="30" height="30">SnsSg Kitchen by Brenda. Pay securely online with Apple Pay or card. <small style="opacity:.65">Site version 10</small><div class="foot-links"><a href="/terms.html">Terms of Sale</a><a href="/privacy.html">Privacy Policy</a><a href="/terms.html#allergens">Allergens</a></div></div></footer>
 <dialog id="confirmDlg" aria-labelledby="cfH">
   <div class="dlg-body">
     <h2 id="cfH">Are you sure?</h2>
@@ -636,10 +641,14 @@ var MENU = [
   {id:"grillfish", cat:"grillfish", name:"Grilled Fish", price:20, img:20, desc:"Whole fish, seasoned and grilled. The price depends on the fish you pick.",
     fish:{label:"What type of fish?", values:[{name:"Mackerel",price:20,img:20},{name:"Pompano",price:32,img:20},{name:"Drum fish",price:40,img:20},{name:"Tilapia",price:30,img:20}]}},
   {id:"friedrice", cat:"friedrice", name:"Fried Rice", price:15, img:21, desc:"Seasoned fried rice with a fresh tomato and onion salad."},
-  {id:"zobo", cat:"zobo", name:"Zobo (Hibiscus Drink)", price:8, img:22, desc:"Hibiscus drink (zobo / rosella) with mint, cinnamon and pineapple. Choose sweet or unsweetened.",
-    fish:{label:"Sweet or unsweetened?", values:[{name:"Sweet",price:8,img:22},{name:"Unsweetened",price:8,img:22}]}},
-  {id:"turkey", cat:"turkey", name:"Grilled Turkey Legs (2)", price:22, img:23, desc:"Two grilled turkey legs."}
+  {id:"zobo", cat:"zobo", name:"Zobo (Hibiscus Drink)", price:12, img:22, desc:"Hibiscus drink (zobo / rosella) with mint, cinnamon, ginger and pineapple. Choose your size, sweet or unsweetened.",
+    fish:{label:"Size and sweetness", values:[{name:"16 oz - Sweet",price:12,img:22},{name:"16 oz - Unsweetened",price:12,img:22},{name:"1 gallon - Sweet",price:35,img:22},{name:"1 gallon - Unsweetened",price:30,img:22}]}},
+  {id:"turkey", cat:"turkey", name:"Grilled Turkey Legs (2)", price:22, img:23, desc:"Two grilled turkey legs."},
+{id:"thanksgiving", cat:"thanksgiving", name:"Thanksgiving Family Package", price:135, img:23, desc:"For Thursday, Nov 26. 1 big grilled turkey, a small tray each of turkey neck collard greens and grilled cinnamon sweet potatoes, cranberry sauce and our spicy chachandu. Only 15 available. Pickup or delivery; delivery fees may apply.",
+  fish:{label:"Choose your turkey flavor", values:[{name:"Garlic Lemon Pepper",price:135,img:23},{name:"Suya Spices (may contain peanuts)",price:135,img:23},{name:"Jalapeño",price:135,img:23}]}}
 ];
+// After Thanksgiving the package and its section go away.
+if(Date.now()>=Date.UTC(2026,10,27,6)){ MENU=MENU.filter(function(m){ return m.id!=="thanksgiving"; }); $("thanksgiving").hidden=true; document.querySelector('.cats a[href="#thanksgiving"]').hidden=true; }
 // Scrolling banner: built from the menu and repeated so it always fills the screen, even on wide monitors.
 (function(){
   var tr=document.querySelector(".marquee-track"); if(!tr) return;
@@ -868,7 +877,7 @@ MENU.forEach(function(m){ $("list-"+m.cat).appendChild(makeCard(m,"card")); });
 // ---- Header shadow and active menu tab
 (function(){
   var top=document.querySelector(".topbar"), links=document.querySelectorAll(".cats a"), strip=document.querySelector(".cats-in");
-  var ids=["favs","soups","chapati","fish","zege","urojo","vitumbua","mishikaki","salmon","samosa","grillfish","friedrice","zobo","turkey"];
+  var ids=["favs","thanksgiving","soups","chapati","fish","zege","urojo","vitumbua","mishikaki","salmon","samosa","grillfish","friedrice","zobo","turkey"];
   var secs=ids.map(function(id){ return $(id); });
   var ticking=false, lock="", shown="";
   function lastShown(){ for(var i=secs.length-1;i>=0;i--){ if(secs[i]&&!secs[i].hidden) return secs[i].id; } return ""; }
@@ -1195,7 +1204,7 @@ function nextDay(dow){ var n=new Date(), t=new Date(n.getFullYear(),n.getMonth()
 function fmtLong(dt){ return new Intl.DateTimeFormat("en-US",{weekday:"long",month:"short",day:"numeric",year:"numeric"}).format(dt); }
 function dayRadios(){
   var t0=new Date(); t0=new Date(t0.getFullYear(),t0.getMonth(),t0.getDate());
-  var days=COOK_DAYS.map(nextDay).sort(function(x,y){ return x-y; }); // soonest first
+  var days=cart.some(function(l){ return l.id==="thanksgiving"; })?[new Date(2026,10,26)]:COOK_DAYS.map(nextDay).sort(function(x,y){ return x-y; }); // soonest first; the Thanksgiving package is only for Nov 26
   return days.map(function(dt,i){
     var dow=dt.getDay(), id=ymd(dt.getFullYear(),dt.getMonth(),dt.getDate()), n=Math.round((dt-t0)/86400000);
     var tag=n===0?"Today":n===1?"Tomorrow":"In "+n+" days";
@@ -1770,7 +1779,7 @@ function pay(){
     });
 }
 
-["list-soups","list-chapati","list-fish","list-zege","list-urojo","list-vitumbua","list-mishikaki","list-salmon","list-samosa","list-grillfish","list-friedrice","list-zobo","list-turkey"].forEach(function(id){ initDials($(id),"card","fresh"); });
+["list-thanksgiving","list-soups","list-chapati","list-fish","list-zege","list-urojo","list-vitumbua","list-mishikaki","list-salmon","list-samosa","list-grillfish","list-friedrice","list-zobo","list-turkey"].forEach(function(id){ initDials($(id),"card","fresh"); });
 syncFavs();
 render();
 (function(){
@@ -1783,7 +1792,14 @@ render();
     try{ history.replaceState(null,"",location.pathname); }catch(e){}
   }
 })();
+// The server counts the packages (limit 15). When none are left, the card shows "Sold out" and cannot be opened.
+function pkgClosed(){
+  var card=document.querySelector("#list-thanksgiving .item"); if(!card) return;
+  card.disabled=true; card.style.opacity=".55";
+  var pr=card.querySelector(".p"); if(pr) pr.textContent="Sold out";
+}
 fetch("/api/config").then(function(r){ return r.json(); }).then(function(c){
+  if(c&&c.pkgLeft!=null&&c.pkgLeft<=0) pkgClosed();
   if(c&&c.enabled) ACCT={url:c.url,key:c.key};
   drawAcct();
   if(ACCT) recoveryFromLink();
