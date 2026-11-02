@@ -646,7 +646,7 @@ var MENU = [
     fish:{label:"Size", values:[{name:"8 oz",price:8,img:22},{name:"16 oz",price:12,img:22},{name:"1 gallon",price:35,unsweet:30,img:22}]},
     sweet:{label:"Sweetness", values:["Sweet","Unsweetened"]}},
   {id:"turkey", cat:"turkey", name:"Grilled Turkey Legs (2)", price:22, img:23, desc:"Two grilled turkey legs."},
-{id:"thanksgiving", cat:"thanksgiving", name:"Thanksgiving Family Package", price:135, img:23, desc:"For Thursday, Nov 26. 1 big grilled turkey, a small tray each of turkey neck collard greens and grilled cinnamon sweet potatoes, cranberry sauce and our spicy chachandu. Only 15 available. Pickup or delivery; delivery fees may apply.",
+{id:"thanksgiving", cat:"thanksgiving", name:"Thanksgiving Family Package", price:135, img:23, desc:"Order before Nov 24 for Thursday, Nov 26. 1 big grilled turkey, a small tray each of turkey neck collard greens and grilled cinnamon sweet potatoes, cranberry sauce and our spicy chachandu. Only 15 available. Pickup or delivery; delivery fees may apply.",
   fish:{label:"Choose your turkey flavor", values:[{name:"Garlic Lemon Pepper",price:135,img:23},{name:"Suya Spices (may contain peanuts)",price:135,img:23},{name:"Jalapeño",price:135,img:23}]}}
 ];
 // After Thanksgiving the package and its section go away.
@@ -1813,11 +1813,13 @@ render();
   }
 })();
 // The server counts the packages (limit 15). When none are left, the card shows "Sold out" and cannot be opened.
-function pkgClosed(){
+function pkgClosed(label){
   var card=document.querySelector("#list-thanksgiving .item"); if(!card) return;
   card.disabled=true; card.style.opacity=".55";
-  var pr=card.querySelector(".p"); if(pr) pr.textContent="Sold out";
+  var pr=card.querySelector(".p"); if(pr) pr.textContent=label||"Sold out";
 }
+// Orders for the package close at the start of Nov 24 (Houston time); the card stays up, closed, until Thanksgiving is over.
+if(Date.now()>=Date.UTC(2026,10,24,6)) pkgClosed("Orders closed");
 fetch("/api/config").then(function(r){ return r.json(); }).then(function(c){
   if(c&&c.pkgLeft!=null&&c.pkgLeft<=0) pkgClosed();
   if(c&&c.enabled) ACCT={url:c.url,key:c.key};

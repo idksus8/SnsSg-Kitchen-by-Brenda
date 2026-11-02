@@ -45,7 +45,7 @@ function priceOrder(items) {
   if (!Array.isArray(items) || items.length === 0) throw new UserError("Your order is empty.");
   if (items.length > 25) throw new UserError("Too many items in one order. Please split it up.");
   const lines = items.map((it) => {
-    if (it && it.id === PKG_ID && Date.now() >= PKG_END) throw new UserError("The Thanksgiving package is no longer available.");
+    if (it && it.id === PKG_ID && Date.now() >= PKG_END) throw new UserError("Ordering for the Thanksgiving package has closed. It had to be ordered before Nov 24.");
     const m = MENU[it && it.id];
     if (!m) throw new UserError("One of the items is no longer on the menu. Please refresh the page.");
     const qty = Number(it.qty);
@@ -117,6 +117,6 @@ function withDelivery(lines, mode, feeCents) {
 const TERMS_VERSION = "2026-11-01";
 
 const PKG_ID = "thanksgiving", PKG_DATE = "2026-11-26", PKG_LIMIT = 15;
-const PKG_END = Date.UTC(2026, 10, 27, 6, 0, 0); // the end of Nov 26 in Houston
+const PKG_END = Date.UTC(2026, 10, 24, 6, 0, 0); // orders close at the start of Nov 24 in Houston (the last day to order is Nov 23)
 
 module.exports = { PKG_ID, PKG_DATE, PKG_LIMIT, TERMS_VERSION, SHOP_NAME, MENU, UserError, priceOrder, validateCustomer, clean, withDelivery, DELIVERY_FEE_CENTS };
