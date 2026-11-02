@@ -21,7 +21,7 @@ const MENU = {
   friedrice: { name: "Fried Rice", cents: 1500 },
   // Thanksgiving package: Thursday Nov 26, 2026 only, and only 15 in the first batch (see _package.js).
   thanksgiving: { name: "Thanksgiving Family Package", cents: 13500, fish: [{ name: "Garlic Lemon Pepper", cents: 13500 }, { name: "Suya Spices (may contain peanuts)", cents: 13500 }, { name: "Jalapeño", cents: 13500 }] },
-  zobo: { name: "Zobo (Hibiscus Drink)", cents: 800, fish: [{ name: "8 oz - Sweet", cents: 800 }, { name: "8 oz - Unsweetened", cents: 800 }, { name: "16 oz - Sweet", cents: 1200 }, { name: "16 oz - Unsweetened", cents: 1200 }, { name: "1 gallon - Sweet", cents: 3500 }, { name: "1 gallon - Unsweetened", cents: 3000 }] },
+  zobo: { name: "Zobo (Hibiscus Drink)", cents: 800, fish: [{ name: "8 oz", cents: 800 }, { name: "16 oz", cents: 1200 }, { name: "1 gallon", cents: 3500, unsweetCents: 3000 }], sweet: ["Sweet", "Unsweetened"] },
   turkey: { name: "Grilled Turkey Legs (2)", cents: 2200 },
   // Kisinia is priced by the fish picked; the first one (Mackerel) is the default.
   kisinia: {
@@ -51,12 +51,19 @@ function priceOrder(items) {
     const qty = Number(it.qty);
     if (!Number.isInteger(qty) || qty < 1 || qty > 50) throw new UserError("Please check the quantities in your order.");
     // Dishes sold by type of fish: the fish picked sets the price. A missing choice means the first (default) fish.
-    let fishName = "", unitCents = m.cents;
+    let fishName = "", sweetName = "", unitCents = m.cents;
     if (m.fish) {
-      const want = clean(it.fish, 40);
+      let want = clean(it.fish, 40), sw = clean(it.sweet, 40);
+      // An older page may still send the two choices joined, like "16 oz - Sweet".
+      if (m.sweet && !sw && want.includes(" - ")) { const p = want.split(" - "); want = p[0]; sw = p[1]; }
       const f = want ? m.fish.find((x) => x.name === want) : m.fish[0];
       if (!f) throw new UserError("Please choose an option for " + m.name + ".");
       fishName = f.name; unitCents = f.cents;
+      if (m.sweet) {
+        sweetName = sw || m.sweet[0];
+        if (!m.sweet.includes(sweetName)) throw new UserError("Please choose sweet or unsweetened for " + m.name + ".");
+        if (sweetName === "Unsweetened" && f.unsweetCents != null) unitCents = f.unsweetCents;
+      }
     }
     let opt = "";
     if (m.options) {
@@ -71,7 +78,7 @@ function priceOrder(items) {
       if (sides > 1) unitCents += (sides - 1) * (m.moreSide || 0);
     }
     const note = clean(it.note, 120);
-    let label = m.name + (fishName ? " - " + fishName : "") + (opt ? " (" + opt + ")" : "") + (note ? " - Note: " + note : "");
+    let label = m.name + (fishName ? " - " + fishName : "") + (sweetName ? " - " + sweetName : "") + (opt ? " (" + opt + ")" : "") + (note ? " - Note: " + note : "");
     return { label: label.slice(0, 240), qty, unitCents };
   });
   const subtotalCents = lines.reduce((s, l) => s + l.unitCents * l.qty, 0);

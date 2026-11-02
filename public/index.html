@@ -576,6 +576,7 @@ dialog[open]::backdrop{animation:fade .25s ease}
   <div class="dlg-body">
     <div><h2 id="iName"></h2><p id="iDesc"></p></div>
     <fieldset id="iFish" hidden><legend>What type of fish?</legend></fieldset>
+    <fieldset id="iSweet" hidden><legend>Sweetness</legend></fieldset>
     <fieldset id="iOpts" hidden><legend>Choose your side</legend></fieldset>
     <label class="f">Special instructions (optional)
       <textarea id="iNote" placeholder="For example: extra pepper, no onions"></textarea>
@@ -642,7 +643,8 @@ var MENU = [
     fish:{label:"What type of fish?", values:[{name:"Mackerel",price:20,img:20},{name:"Pompano",price:32,img:20},{name:"Drum fish",price:40,img:20},{name:"Tilapia",price:30,img:20}]}},
   {id:"friedrice", cat:"friedrice", name:"Fried Rice", price:15, img:21, desc:"Seasoned fried rice with a fresh tomato and onion salad."},
   {id:"zobo", cat:"zobo", name:"Zobo (Hibiscus Drink)", price:8, img:22, desc:"Hibiscus drink (zobo / rosella) with mint, cinnamon, ginger and pineapple. Choose your size, sweet or unsweetened.",
-    fish:{label:"Size and sweetness", values:[{name:"8 oz - Sweet",price:8,img:22},{name:"8 oz - Unsweetened",price:8,img:22},{name:"16 oz - Sweet",price:12,img:22},{name:"16 oz - Unsweetened",price:12,img:22},{name:"1 gallon - Sweet",price:35,img:22},{name:"1 gallon - Unsweetened",price:30,img:22}]}},
+    fish:{label:"Size", values:[{name:"8 oz",price:8,img:22},{name:"16 oz",price:12,img:22},{name:"1 gallon",price:35,unsweet:30,img:22}]},
+    sweet:{label:"Sweetness", values:["Sweet","Unsweetened"]}},
   {id:"turkey", cat:"turkey", name:"Grilled Turkey Legs (2)", price:22, img:23, desc:"Two grilled turkey legs."},
 {id:"thanksgiving", cat:"thanksgiving", name:"Thanksgiving Family Package", price:135, img:23, desc:"For Thursday, Nov 26. 1 big grilled turkey, a small tray each of turkey neck collard greens and grilled cinnamon sweet potatoes, cranberry sauce and our spicy chachandu. Only 15 available. Pickup or delivery; delivery fees may apply.",
   fish:{label:"Choose your turkey flavor", values:[{name:"Garlic Lemon Pepper",price:135,img:23},{name:"Suya Spices (may contain peanuts)",price:135,img:23},{name:"Jalapeño",price:135,img:23}]}}
@@ -672,7 +674,7 @@ function cents(x){ return Math.round(x*100); }
 // Brenda's Zelle phone number or email. Customers send their payment here. The Zelle button stays hidden while this is empty.
 var ZELLE_TO = "832-276-0334";
 var cart = [];
-try { var saved = JSON.parse(localStorage.getItem("snssg-cart")||"[]"); if (Array.isArray(saved)) cart = saved.filter(function(l){return MENU.some(function(m){return m.id===l.id;});}); } catch(e){}
+try { var saved = JSON.parse(localStorage.getItem("snssg-cart")||"[]"); if (Array.isArray(saved)) cart = saved.filter(function(l){return MENU.some(function(m){return m.id===l.id;});}); cart.forEach(function(l){ if(l.id==="zobo"&&l.fish&&!l.sweet&&l.fish.indexOf(" - ")>0){ var pr=l.fish.split(" - "); l.fish=pr[0]; l.sweet=pr[1]; } }); } catch(e){}
 
 function $(id){return document.getElementById(id);}
 function money(n){return "$"+n.toFixed(2);}
@@ -688,7 +690,8 @@ function sideExtra(m,opt){
   if(m.options.more&&sides>1) sum+=(sides-1)*m.options.more;
   return sum;
 }
-function unitPrice(l){ var m=find(l.id), base=m.price; if(m.fish){ var f=m.fish.values.filter(function(v){return v.name===l.fish;})[0]||m.fish.values[0]; base=f.price; } return base+sideExtra(m,l.opt); }
+function pickPrice(f,sw){ return (sw==="Unsweetened"&&f.unsweet!=null)?f.unsweet:f.price; } // some sizes cost less unsweetened
+function unitPrice(l){ var m=find(l.id), base=m.price; if(m.fish){ var f=m.fish.values.filter(function(v){return v.name===l.fish;})[0]||m.fish.values[0]; base=pickPrice(f,l.sweet||(m.sweet?m.sweet.values[0]:"")); } return base+sideExtra(m,l.opt); }
 function total(){return cart.reduce(function(s,l){return s+unitPrice(l)*l.qty;},0);}
 function count(){return cart.reduce(function(s,l){return s+l.qty;},0);}
 
@@ -933,10 +936,17 @@ function openItem(m){
   if(m.fish){
     ff.hidden=false;
     ff.innerHTML='<legend>'+esc(m.fish.label)+'</legend>'+m.fish.values.map(function(v,i){
-      return '<label class="opt"><input type="radio" name="fish" value="'+esc(v.name)+'"'+(i===0?' checked':'')+'> <img class="fth" src="'+IMGS[v.img]+'" alt=""> <span>'+esc(v.name)+' &middot; '+money(v.price)+'</span></label>';
+      return '<label class="opt"><input type="radio" name="fish" value="'+esc(v.name)+'"'+(i===0?' checked':'')+'> <img class="fth" src="'+IMGS[v.img]+'" alt=""> <span>'+esc(v.name)+' &middot; '+money(v.price)+(v.unsweet!=null?' <span class="up">('+money(v.unsweet)+' unsweetened)</span>':'')+'</span></label>';
     }).join("");
     showFishPhoto(false);
   } else { ff.hidden=true; ff.innerHTML=""; }
+  var sw=$("iSweet");
+  if(m.sweet){
+    sw.hidden=false;
+    sw.innerHTML='<legend>'+esc(m.sweet.label)+'</legend>'+m.sweet.values.map(function(v,i){
+      return '<label class="opt"><input type="radio" name="sweet" value="'+esc(v)+'"'+(i===0?' checked':'')+'> <span>'+esc(v)+'</span></label>';
+    }).join("");
+  } else { sw.hidden=true; sw.innerHTML=""; }
   var fs=$("iOpts");
   if(m.options){
     fs.hidden=false;
@@ -961,12 +971,17 @@ function showFishPhoto(animate){
   if(animate){ im.classList.remove("swap"); void im.offsetWidth; im.classList.add("swap"); }
 }
 $("iFish").onchange=function(){ showFishPhoto(true); refreshItem(); };
+function curSweet(){
+  if(!cur||!cur.sweet) return "";
+  var r=document.querySelector('input[name="sweet"]:checked'); return r?r.value:cur.sweet.values[0];
+}
+$("iSweet").onchange=function(){ refreshItem(); };
 $("iOpts").onchange=function(){ refreshItem(); };
 function refreshItem(){
   dialSet($("iQty"),String(curQty),"iqty",false,true);
   if(!$("iPrice")) $("iAdd").innerHTML='Add to order <span class="dv" id="iPrice"></span>';
   var picked=Array.prototype.map.call(document.querySelectorAll('input[name="side"]:checked'),function(x){return x.value;});
-  dialSet($("iPrice"),money(((cur.fish?curFish().price:cur.price)+sideExtra(cur,picked.join(", ")))*curQty),"iprice",false,true);
+  dialSet($("iPrice"),money(((cur.fish?pickPrice(curFish(),curSweet()):cur.price)+sideExtra(cur,picked.join(", ")))*curQty),"iprice",false,true);
 }
 $("iMinus").onclick=function(){ if(curQty>1){curQty--;refreshItem();} };
 $("iPlus").onclick=function(){ if(curQty<50){curQty++;refreshItem();} };
@@ -979,9 +994,9 @@ $("iAdd").onclick=function(){
     opt=cur.options.values.filter(function(v){return picked.indexOf(v)>-1;}).join(", ");
   }
   var note=$("iNote").value.trim();
-  var fish=cur.fish?curFish().name:"";
-  var ex=cart.filter(function(l){return l.id===cur.id&&l.opt===opt&&l.note===note&&(l.fish||"")===fish;})[0];
-  if(ex) ex.qty+=curQty; else cart.push({id:cur.id,fish:fish,opt:opt,note:note,qty:curQty});
+  var fish=cur.fish?curFish().name:"", sweet=curSweet();
+  var ex=cart.filter(function(l){return l.id===cur.id&&l.opt===opt&&l.note===note&&(l.fish||"")===fish&&(l.sweet||"")===sweet;})[0];
+  if(ex) ex.qty+=curQty; else cart.push({id:cur.id,fish:fish,sweet:sweet,opt:opt,note:note,qty:curQty});
   var fr=$("iImg").getBoundingClientRect(), fsrc=$("iImg").src;
   save(); render(); $("itemDlg").close(); toast("Added to your order: "+cur.name); fly(fr,fsrc);
 };
@@ -991,7 +1006,7 @@ function linesHTML(){
   return '<ul class="lines">'+cart.map(function(l,i){
     var m=find(l.id);
     return '<li class="line"><div><div class="nm">'+esc(m.name)+'</div>'+
-      (l.fish?'<div class="sub">'+esc(l.fish)+'</div>':'')+
+      (l.fish?'<div class="sub">'+esc(l.fish)+(l.sweet?' - '+esc(l.sweet):'')+'</div>':'')+
       (l.opt?'<div class="sub">'+esc(l.opt)+'</div>':'')+
       (l.note?'<div class="sub">Note: '+esc(l.note)+'</div>':'')+
       '<div class="qty"><button type="button" data-a="dec" data-i="'+i+'" aria-label="Remove one '+esc(m.name)+'">&minus;</button><span class="dv" data-k="lq'+i+'" data-t="'+l.qty+'"></span><button type="button" data-a="inc" data-i="'+i+'" aria-label="Add one '+esc(m.name)+'">+</button></div></div>'+
@@ -1133,7 +1148,7 @@ var pendingRemove=null;
 function askRemove(line){
   pendingRemove=line;
   var m=find(line.id);
-  $("cfMsg").textContent="Remove "+m.name+(line.fish?" - "+line.fish:"")+(line.opt?" ("+line.opt+")":"")+" from your order?";
+  $("cfMsg").textContent="Remove "+m.name+(line.fish?" - "+line.fish:"")+(line.sweet?" - "+line.sweet:"")+(line.opt?" ("+line.opt+")":"")+" from your order?";
   $("confirmDlg").showModal();
 }
 $("cfNo").onclick=function(){ pendingRemove=null; $("confirmDlg").close(); };
@@ -1557,6 +1572,11 @@ function reorder(id){
       fish=m.fish.values[0].name;
       m.fish.values.forEach(function(v){ if(rest.indexOf(" - "+v.name)===0){ fish=v.name; rest=rest.slice((" - "+v.name).length); } });
     }
+    var sweet="";
+    if(m.sweet){
+      sweet=m.sweet.values[0];
+      m.sweet.values.forEach(function(v){ if(rest.indexOf(" - "+v)===0){ sweet=v; rest=rest.slice((" - "+v).length); } });
+    }
     if(m.options){
       var om=/^ \(([^)]*)\)/.exec(rest), got=om?om[1].split(", "):[];
       var okv=m.options.values.filter(function(v){ return got.indexOf(v)>-1; });
@@ -1564,8 +1584,8 @@ function reorder(id){
       opt=okv.join(", ");
     }
     var qty=Math.max(1,Math.min(50,+it.qty||1));
-    var ex=cart.filter(function(l){ return l.id===m.id&&l.opt===opt&&l.note===note&&(l.fish||"")===fish; })[0];
-    if(ex) ex.qty=Math.min(50,ex.qty+qty); else cart.push({id:m.id,fish:fish,opt:opt,note:note,qty:qty});
+    var ex=cart.filter(function(l){ return l.id===m.id&&l.opt===opt&&l.note===note&&(l.fish||"")===fish&&(l.sweet||"")===sweet; })[0];
+    if(ex) ex.qty=Math.min(50,ex.qty+qty); else cart.push({id:m.id,fish:fish,sweet:sweet,opt:opt,note:note,qty:qty});
     added++;
   });
   if(!added){ toast("Those items are no longer on the menu"); return; }
@@ -1626,7 +1646,7 @@ $("coX").onclick=function(){$("coDlg").close();};
 function saveLast(d){
   try{ localStorage.setItem("snssg-last",JSON.stringify({mode:d.mode,addr:d.addr,when:d.when,
     total:total()+(d.mode==="Delivery"?DELIVERY_FEE:0),
-    items:cart.map(function(l){ var m=find(l.id); return {n:m.name,q:l.qty,o:[l.fish,l.opt].filter(Boolean).join(", "),note:l.note||"",p:unitPrice(l)}; })})); }catch(e){}
+    items:cart.map(function(l){ var m=find(l.id); return {n:m.name,q:l.qty,o:[l.fish,l.sweet,l.opt].filter(Boolean).join(", "),note:l.note||"",p:unitPrice(l)}; })})); }catch(e){}
 }
 function lastHTML(){
   var o=null;
@@ -1705,7 +1725,7 @@ function zelleStart(){
 }
 function zelleShow(d){
   var amt=total()+(d.mode==="Delivery"?DELIVERY_FEE:0);
-  var items=cart.map(function(l){return {id:l.id,qty:l.qty,fish:l.fish||"",opt:l.opt,note:l.note};});
+  var items=cart.map(function(l){return {id:l.id,qty:l.qty,fish:l.fish||"",sweet:l.sweet||"",opt:l.opt,note:l.note};});
   $("coBody").innerHTML='<h2 id="coH">Pay with Zelle</h2>'+
     '<div class="sumbox"><div class="tot" style="border:0;margin:0;padding:0"><span>Send exactly</span><span>'+money(amt)+'</span></div>'+
     '<div class="sub" style="margin-top:8px">To Brenda on Zelle:</div>'+
@@ -1759,7 +1779,7 @@ function pay(){
   if(busy) return;
   var d=readDetails(); if(!d) return;
   busy=true; $("cGo").disabled=true; $("cGo").classList.add("loading"); $("cGo").textContent="Opening secure checkout..."; $("cErr").textContent="";
-  var payload={items:cart.map(function(l){return {id:l.id,qty:l.qty,fish:l.fish||"",opt:l.opt,note:l.note};}),customer:d,agreed:true,quote:(d.mode==="Delivery"&&QUOTE.addr===d.addr)?QUOTE.token:"",expected:cents(total()+(d.mode==="Delivery"?DELIVERY_FEE:0))};
+  var payload={items:cart.map(function(l){return {id:l.id,qty:l.qty,fish:l.fish||"",sweet:l.sweet||"",opt:l.opt,note:l.note};}),customer:d,agreed:true,quote:(d.mode==="Delivery"&&QUOTE.addr===d.addr)?QUOTE.token:"",expected:cents(total()+(d.mode==="Delivery"?DELIVERY_FEE:0))};
   var wasIn=!!SES;
   token().then(function(t){
     if(wasIn&&!t){ var ex=new Error("Your login expired. Please log in again or continue as guest."); ex.auth=true; throw ex; }
