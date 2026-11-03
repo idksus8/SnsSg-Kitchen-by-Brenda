@@ -22,7 +22,7 @@ const MENU = {
   // Thanksgiving package: Thursday Nov 26, 2026 only, and only 15 in the first batch (see _package.js).
   thanksgiving: { name: "Thanksgiving Family Package", cents: 13500, fish: [{ name: "Garlic Lemon Pepper", cents: 13500 }, { name: "Suya Spices (may contain peanuts)", cents: 13500 }, { name: "Jalapeño", cents: 13500 }] },
   zobo: { name: "Zobo (Hibiscus Drink)", cents: 800, fish: [{ name: "8 oz", cents: 800 }, { name: "16 oz", cents: 1200 }, { name: "1 gallon", cents: 3500, unsweetCents: 3000 }], sweet: ["Sweet", "Unsweetened"] },
-  baobab: { name: "Baobab Drink", cents: 800, fish: [{ name: "8 oz", cents: 800 }, { name: "16 oz", cents: 1200 }, { name: "1 gallon", cents: 3500, unsweetCents: 3000 }], sweet: ["Sweet", "Unsweetened"] },
+  baobab: { name: "Baobab Drink", cents: 800 },
   turkey: { name: "Grilled Turkey Legs (2)", cents: 2200 },
   // Kisinia is priced by the fish picked; the first one (Mackerel) is the default.
   kisinia: {
