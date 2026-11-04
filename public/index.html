@@ -650,9 +650,11 @@ var MENU = [
   {id:"chickenfeet", cat:"chickenfeet", name:"Pure Collagen (Chicken Feet)", price:15, img:29, desc:"Pure collagen chicken feet (chicken legs). Choose boiled, roasted spicy or roasted regular.",
     fish:{label:"Choose your style", values:[{name:"Boiled",price:15,img:29},{name:"Roasted spicy",price:18,img:30},{name:"Roasted regular",price:18,img:30}]}},
   {id:"zobo", cat:"zobo", name:"Zobo (Hibiscus Drink)", price:8, img:22, desc:"Hibiscus drink (zobo / rosella) with mint, cinnamon, ginger and pineapple. Choose your size, sweet or unsweetened.",
-    fish:{label:"Size", values:[{name:"8 oz",price:8,img:22},{name:"16 oz",price:12,img:22},{name:"1 gallon",price:35,unsweet:30,img:22}]},
+    fish:{label:"Size", values:[{name:"12 oz",price:8,img:22},{name:"16 oz",price:12,img:22},{name:"33 oz",price:35,unsweet:30,img:22}]},
     sweet:{label:"Sweetness", values:["Sweet","Unsweetened"]}},
-  {id:"baobab", cat:"zobo", name:"Baobab Drink", price:8, img:27, desc:"Baobab fruit drink with mint, cinnamon and ice."},
+  {id:"baobab", cat:"zobo", name:"Fresh Home Made Baobab Juice (Juicy ya Ubuyu)", price:8, img:27, desc:"Fresh home made baobab juice (juisi ya ubuyu) with mint, cinnamon and ice. Choose your size, sweet or unsweetened.",
+    fish:{label:"Size", values:[{name:"12 oz",price:8,img:27},{name:"16 oz",price:12,img:27},{name:"33 oz",price:35,unsweet:30,img:27}]},
+    sweet:{label:"Sweetness", values:["Sweet","Unsweetened"]}},
   {id:"turkey", cat:"turkey", name:"Grilled Turkey Legs (2)", price:22, img:23, desc:"Two grilled turkey legs."},
 {id:"thanksgiving", cat:"thanksgiving", name:"Thanksgiving Family Package", price:135, img:25, desc:"Order before Nov 24 for Thursday, Nov 26. 1 big grilled turkey, a small tray each of turkey neck collard greens and grilled cinnamon sweet potatoes, cranberry sauce and our spicy chachandu. Only 15 available. Pickup or delivery; delivery fees may apply.",
   fish:{label:"Choose your turkey flavor", values:[{name:"Garlic Lemon Pepper",price:135,img:25},{name:"Suya Spices (may contain peanuts)",price:135,img:26},{name:"Jalapeño",price:135,img:25}]}}
@@ -682,7 +684,7 @@ function cents(x){ return Math.round(x*100); }
 // Brenda's Zelle phone number or email. Customers send their payment here. The Zelle button stays hidden while this is empty.
 var ZELLE_TO = "832-276-0334";
 var cart = [];
-try { var saved = JSON.parse(localStorage.getItem("snssg-cart")||"[]"); if (Array.isArray(saved)) cart = saved.filter(function(l){return MENU.some(function(m){return m.id===l.id;});}); cart.forEach(function(l){ if(l.id==="zobo"&&l.fish&&!l.sweet&&l.fish.indexOf(" - ")>0){ var pr=l.fish.split(" - "); l.fish=pr[0]; l.sweet=pr[1]; } }); } catch(e){}
+try { var saved = JSON.parse(localStorage.getItem("snssg-cart")||"[]"); if (Array.isArray(saved)) cart = saved.filter(function(l){return MENU.some(function(m){return m.id===l.id;});}); cart.forEach(function(l){ if(l.id==="zobo"&&l.fish&&!l.sweet&&l.fish.indexOf(" - ")>0){ var pr=l.fish.split(" - "); l.fish=pr[0]; l.sweet=pr[1]; } if(l.id==="zobo"&&l.fish){ l.fish=({"8 oz":"12 oz","1 gallon":"33 oz"})[l.fish]||l.fish; } if(l.id==="baobab"&&!l.fish){ l.fish="12 oz"; l.sweet=l.sweet||"Sweet"; } }); } catch(e){}
 
 function $(id){return document.getElementById(id);}
 function money(n){return "$"+n.toFixed(2);}
