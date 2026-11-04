@@ -71,6 +71,7 @@ img{max-width:100%;display:block}
 .cats a:hover{background:var(--saffron);color:#1A1405}
 
 .section{padding-top:28px}
+.section.gh{display:none}
 .section h2{font-size:1.6rem;font-weight:700;margin-bottom:14px}
 .items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .item{display:flex;justify-content:space-between;gap:14px;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;width:100%;min-height:140px}
@@ -462,92 +463,84 @@ dialog[open]::backdrop{animation:fade .25s ease}
 
 <nav class="cats" aria-label="Menu sections">
   <div class="cats-in">
-    <a href="#favs" id="navFav" hidden>Favorites</a>
-    <a href="#thanksgiving">Thanksgiving</a>
-    <a href="#soups">Soups</a>
-    <a href="#chapati">Chapati</a>
-    <a href="#fish">Fish and shrimp</a>
-    <a href="#zege">Zege</a>
-    <a href="#urojo">Urojo</a>
-    <a href="#vitumbua">Vitumbua</a>
-    <a href="#mishikaki">Mishikaki</a>
-    <a href="#salmon">Salmon</a>
-    <a href="#samosa">Samosa</a>
-    <a href="#grillfish">Grilled fish</a>
-    <a href="#friedrice">Fried rice</a>
-    <a href="#chickenfeet">Chicken feet</a>
-    <a href="#zobo">Drinks</a>
-    <a href="#turkey">Turkey legs</a>
+    <a href="#g-favs" data-g="g-favs" id="navFav" hidden>Favorites</a>
+    <a href="#g-recent" data-g="g-recent" id="navRecent" hidden>My orders</a>
+    <a href="#g-thanks" data-g="g-thanks">Thanksgiving</a>
+    <a href="#g-soups" data-g="g-soups">Soups &amp; Chapati</a>
+    <a href="#g-seafood" data-g="g-seafood">Seafood</a>
+    <a href="#g-grill" data-g="g-grill">Grill &amp; Mains</a>
+    <a href="#g-street" data-g="g-street">Street Food</a>
+    <a href="#g-drinks" data-g="g-drinks">Drinks</a>
   </div>
 </nav>
 
 <main class="wrap">
   <div>
-    <section class="section" id="recent" hidden>
+    <section class="section" data-g="g-recent" id="recent" hidden>
       <h2>Your recent orders</h2>
       <div id="recentBody"></div>
     </section>
-    <section class="section" id="favs" hidden>
+    <section class="section" data-g="g-favs" id="favs" hidden>
       <h2>Your favorites</h2>
       <div class="items" id="list-favs"></div>
     </section>
-    <section class="section" id="thanksgiving">
+    <section class="section" data-g="g-thanks" id="thanksgiving">
       <h2>Thanksgiving</h2>
       <div class="items" id="list-thanksgiving"></div>
     </section>
-    <section class="section" id="soups">
+    <section class="section" data-g="g-soups" id="soups">
       <h2>Soups</h2>
       <div class="items" id="list-soups"></div>
     </section>
-    <section class="section" id="chapati">
+    <section class="section" data-g="g-soups" id="chapati">
       <h2>Chapati</h2>
       <div class="items" id="list-chapati"></div>
     </section>
-    <section class="section" id="fish">
+    <section class="section" data-g="g-seafood" id="fish">
       <h2>Fish and shrimp</h2>
       <div class="items" id="list-fish"></div>
     </section>
-    <section class="section" id="zege">
+    <section class="section" data-g="g-street" id="zege">
       <h2>Zege</h2>
       <div class="items" id="list-zege"></div>
     </section>
-    <section class="section" id="urojo">
+    <section class="section" data-g="g-street" id="urojo">
       <h2>Urojo</h2>
       <div class="items" id="list-urojo"></div>
     </section>
-    <section class="section" id="vitumbua">
+    <section class="section" data-g="g-street" id="vitumbua">
       <h2>Vitumbua</h2>
       <div class="items" id="list-vitumbua"></div>
     </section>
-    <section class="section" id="mishikaki">
+    <section class="section" data-g="g-grill" id="mishikaki">
       <h2>Mishikaki</h2>
       <div class="items" id="list-mishikaki"></div>
     </section>
-    <section class="section" id="salmon">
+    <section class="section" data-g="g-seafood" id="salmon">
       <h2>Salmon</h2>
       <div class="items" id="list-salmon"></div>
     </section>
-    <section class="section" id="samosa">
+    <section class="section" data-g="g-street" id="samosa">
       <h2>Samosa</h2>
       <div class="items" id="list-samosa"></div>
     </section>
-    <section class="section" id="grillfish">
+    <section class="section" data-g="g-seafood" id="grillfish">
       <h2>Grilled fish</h2>
       <div class="items" id="list-grillfish"></div>
     </section>
-    <section class="section" id="friedrice">
+    <section class="section" data-g="g-grill" id="friedrice">
       <h2>Fried rice</h2>
       <div class="items" id="list-friedrice"></div>
     </section>
-    <section class="section" id="chickenfeet">
+    <section class="section" data-g="g-grill" id="chickenfeet">
       <h2>Pure collagen (chicken feet)</h2>
       <div class="items" id="list-chickenfeet"></div>
     </section>
-    <section class="section" id="zobo">
+    <section class="section" data-g="g-drinks" id="zobo">
       <h2>Drinks</h2>
       <div class="items" id="list-zobo"></div>
     </section>
-    <section class="section" id="turkey">
+    <section class="section" data-g="g-grill" id="turkey">
       <h2>Turkey legs</h2>
       <div class="items" id="list-turkey"></div>
     </section>
@@ -660,7 +653,7 @@ var MENU = [
   fish:{label:"Choose your turkey flavor", values:[{name:"Garlic Lemon Pepper",price:135,img:25},{name:"Suya Spices (may contain peanuts)",price:135,img:26},{name:"Jalapeño",price:135,img:25}]}}
 ];
 // After Thanksgiving the package and its section go away.
-if(Date.now()>=Date.UTC(2026,10,27,6)){ MENU=MENU.filter(function(m){ return m.id!=="thanksgiving"; }); $("thanksgiving").hidden=true; document.querySelector('.cats a[href="#thanksgiving"]').hidden=true; }
+if(Date.now()>=Date.UTC(2026,10,27,6)){ MENU=MENU.filter(function(m){ return m.id!=="thanksgiving"; }); $("thanksgiving").hidden=true;  }
 // Scrolling banner: built from the menu and repeated so it always fills the screen, even on wide monitors.
 (function(){
   var tr=document.querySelector(".marquee-track"); if(!tr) return;
@@ -887,41 +880,64 @@ MENU.forEach(function(m){ $("list-"+m.cat).appendChild(makeCard(m,"card")); });
   Array.prototype.forEach.call(els,function(el,i){ el.classList.add("reveal"); el.style.transitionDelay=((i%2)*80)+"ms"; io.observe(el); });
 })();
 
-// ---- Header shadow and active menu tab
+// ---- Menu tabs: one big category shows at a time; header shadow
 (function(){
-  var top=document.querySelector(".topbar"), links=document.querySelectorAll(".cats a"), strip=document.querySelector(".cats-in");
-  var ids=["favs","thanksgiving","soups","chapati","fish","zege","urojo","vitumbua","mishikaki","salmon","samosa","grillfish","friedrice","chickenfeet","zobo","turkey"];
-  var secs=ids.map(function(id){ return $(id); });
-  var ticking=false, lock="", shown="";
-  function lastShown(){ for(var i=secs.length-1;i>=0;i--){ if(secs[i]&&!secs[i].hidden) return secs[i].id; } return ""; }
-  function upd(){
-    top.classList.toggle("scrolled", window.scrollY>8);
-    var cur="";
-    secs.forEach(function(s){ if(s&&!s.hidden&&s.getBoundingClientRect().top<=170) cur=s.id; });
-    // At the very bottom the last sections are too short to reach the top of the screen, so the last one stays lit.
-    if(window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-4) cur=lastShown();
-    // A tab you just tapped stays lit until you scroll by hand, even when the page cannot scroll far enough to bring its section to the top.
-    if(lock&&$(lock)&&!$(lock).hidden) cur=lock;
-    Array.prototype.forEach.call(links,function(a){ a.classList.toggle("active", a.getAttribute("href")==="#"+cur); });
-    // On narrow screens the tab strip scrolls sideways: keep the lit tab in view.
-    if(cur!==shown){
-      shown=cur;
-      var act=strip&&strip.querySelector("a.active");
-      if(act&&strip.scrollWidth>strip.clientWidth) strip.scrollTo({left:act.offsetLeft-(strip.clientWidth-act.offsetWidth)/2,behavior:"smooth"});
+  var top=document.querySelector(".topbar"), strip=document.querySelector(".cats-in"), main=document.querySelector("main");
+  var links=Array.prototype.slice.call(document.querySelectorAll(".cats a[data-g]"));
+  var secs=Array.prototype.slice.call(document.querySelectorAll(".section[data-g]"));
+  var cur="", pendingUntil=0;
+  function groupOf(id){ var s=$(id); return s?s.getAttribute("data-g"):""; }
+  function visibleIn(g){ return secs.some(function(s){ return s.getAttribute("data-g")===g&&!s.hidden; }); }
+  // Tabs for sections that are empty stay hidden (Favorites is switched by its own code).
+  function syncTabs(){ links.forEach(function(a){ if(a.id==="navFav") return; var hide=!visibleIn(a.getAttribute("data-g")); if(a.hidden!==hide) a.hidden=hide; }); }
+  function firstTab(){ for(var i=0;i<links.length;i++){ if(!links[i].hidden) return links[i].getAttribute("data-g"); } return ""; }
+  function show(g,toTop){
+    cur=g;
+    secs.forEach(function(s){ s.classList.toggle("gh", s.getAttribute("data-g")!==g); });
+    links.forEach(function(a){ a.classList.toggle("active", a.getAttribute("data-g")===g); });
+    var act=strip&&strip.querySelector("a.active");
+    if(act&&strip.scrollWidth>strip.clientWidth) strip.scrollTo({left:act.offsetLeft-(strip.clientWidth-act.offsetWidth)/2,behavior:"smooth"});
+    refreshDials(document);
+    if(toTop){
+      var y=main.getBoundingClientRect().top+window.scrollY-(top.offsetHeight+strip.parentNode.offsetHeight);
+      if(window.scrollY>y) window.scrollTo({top:Math.max(0,y)});
     }
-    ticking=false;
   }
-  function queue(){ if(!ticking){ ticking=true; requestAnimationFrame(upd); } }
-  Array.prototype.forEach.call(links,function(a){
-    a.addEventListener("click",function(){ lock=a.getAttribute("href").slice(1); queue(); });
+  // Open the tab that holds a section and bring that section into view.
+  window.goMenu=function(id){
+    var g=groupOf(id); if(!g) return false;
+    if(!visibleIn(g)) pendingUntil=Date.now()+4000;
+    show(g,false);
+    requestAnimationFrame(function(){
+      var s=$(id);
+      if(s&&!s.hidden) s.scrollIntoView({behavior:"smooth",block:"start"});
+      else { var y=main.getBoundingClientRect().top+window.scrollY-(top.offsetHeight+strip.parentNode.offsetHeight); window.scrollTo({top:Math.max(0,y),behavior:"smooth"}); }
+    });
+    return true;
+  };
+  links.forEach(function(a){
+    a.addEventListener("click",function(e){ e.preventDefault(); show(a.getAttribute("data-g"),true); });
   });
-  window.addEventListener("pointerdown",function(e){ if(lock&&e.target===document.documentElement){ lock=""; queue(); } },{passive:true});
-  ["wheel","touchmove","keydown"].forEach(function(ev){ window.addEventListener(ev,function(){ if(lock){ lock=""; queue(); } },{passive:true}); });
-  var h=(location.hash||"").slice(1); if(ids.indexOf(h)>-1) lock=h;
-  window.addEventListener("hashchange",function(){ var x=(location.hash||"").slice(1); if(ids.indexOf(x)>-1){ lock=x; queue(); } });
-  window.addEventListener("scroll",queue,{passive:true});
-  window.addEventListener("resize",queue);
-  upd();
+  // Links like "See the menu" (#soups) open the right tab first.
+  document.addEventListener("click",function(e){
+    var a=e.target.closest&&e.target.closest('a[href^="#"]'); if(!a||a.hasAttribute("data-g")) return;
+    var id=a.getAttribute("href").slice(1);
+    if(groupOf(id)){ e.preventDefault(); window.goMenu(id); }
+  });
+  function check(){
+    syncTabs();
+    if(!cur||(!visibleIn(cur)&&Date.now()>pendingUntil)) show(firstTab(),false);
+  }
+  if("MutationObserver" in window){
+    var mo=new MutationObserver(check);
+    secs.concat(links).forEach(function(el){ mo.observe(el,{attributes:true,attributeFilter:["hidden"]}); });
+  }
+  window.addEventListener("hashchange",function(){ var x=(location.hash||"").slice(1); if(groupOf(x)) window.goMenu(x); });
+  window.addEventListener("scroll",function(){ top.classList.toggle("scrolled", window.scrollY>8); },{passive:true});
+  syncTabs();
+  var h=(location.hash||"").slice(1);
+  show(groupOf(h)||firstTab(),false);
+  top.classList.toggle("scrolled", window.scrollY>8);
 })();
 
 // ---- Keep sticky bars in step with the real header height; rebuild numbers after resize or font load
@@ -1524,7 +1540,7 @@ function acctView(){
     '<button class="btn alt" type="button" id="aOrders">View recent orders</button>'+
     '<button class="btn alt" type="button" id="aPw">Change password</button>'+
     '<button class="btn danger" type="button" id="aOut">Log out</button>';
-  $("aOrders").onclick=function(){ $("acctDlg").close(); drawRecent(); $("recent").scrollIntoView({behavior:"smooth",block:"start"}); };
+  $("aOrders").onclick=function(){ $("acctDlg").close(); drawRecent(); window.goMenu&&window.goMenu("recent"); };
   $("aPw").onclick=pwView;
   $("aOut").onclick=function(){ logout().then(function(){ $("acctDlg").close(); toast("You are logged out"); }); };
 }
