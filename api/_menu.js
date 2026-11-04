@@ -24,7 +24,7 @@ const MENU = {
   // Pure collagen chicken feet: boiled, or roasted (spicy or regular). The first choice is the default.
   chickenfeet: { name: "Pure Collagen (Chicken Feet)", cents: 1500, fish: [{ name: "Boiled", cents: 1500 }, { name: "Roasted spicy", cents: 1800 }, { name: "Roasted regular", cents: 1800 }] },
   zobo: { name: "Zobo (Hibiscus Drink)", cents: 800, fish: [{ name: "12 oz", cents: 800 }, { name: "16 oz", cents: 1200 }, { name: "33 oz", cents: 3500, unsweetCents: 3000 }], sweet: ["Sweet", "Unsweetened"] },
-  baobab: { name: "Fresh Home Made Baobab Juice (Juicy ya Ubuyu)", cents: 800, fish: [{ name: "12 oz", cents: 800 }, { name: "16 oz", cents: 1200 }, { name: "33 oz", cents: 3500, unsweetCents: 3000 }], sweet: ["Sweet", "Unsweetened"] },
+  baobab: { name: "Fresh Homemade Baobab Juice (Juisi ya Ubuyu)", cents: 800 },
   turkey: { name: "Grilled Turkey Legs (2)", cents: 2200 },
   // Kisinia is priced by the fish picked; the first one (Mackerel) is the default.
   kisinia: {
@@ -59,8 +59,7 @@ function priceOrder(items) {
       let want = clean(it.fish, 40), sw = clean(it.sweet, 40);
       // An older page may still send the two choices joined, like "16 oz - Sweet".
       if (m.sweet && !sw && want.includes(" - ")) { const p = want.split(" - "); want = p[0]; sw = p[1]; }
-      // Zobo sizes were renamed (8 oz -> 12 oz, 1 gallon -> 33 oz); accept the old names from older pages.
-      if (it.id === "zobo") want = ({ "8 oz": "12 oz", "1 gallon": "33 oz" })[want] || want;
+      if (it.id === "zobo") want = want.replace(/^8 oz/, "12 oz").replace(/^1 gallon/, "33 oz");
       const f = want ? m.fish.find((x) => x.name === want) : m.fish[0];
       if (!f) throw new UserError("Please choose an option for " + m.name + ".");
       fishName = f.name; unitCents = f.cents;
