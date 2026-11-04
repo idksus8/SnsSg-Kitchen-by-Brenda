@@ -24,7 +24,7 @@ const MENU = {
   // Pure collagen chicken feet: boiled, or roasted (spicy or regular). The first choice is the default.
   chickenfeet: { name: "Pure Collagen (Chicken Feet)", cents: 1500, fish: [{ name: "Boiled", cents: 1500 }, { name: "Roasted spicy", cents: 1800 }, { name: "Roasted regular", cents: 1800 }] },
   zobo: { name: "Zobo (Hibiscus Drink)", cents: 800, fish: [{ name: "12 oz", cents: 800 }, { name: "16 oz", cents: 1200 }, { name: "33 oz", cents: 3500, unsweetCents: 3000 }], sweet: ["Sweet", "Unsweetened"] },
-  baobab: { name: "Fresh Homemade Baobab Juice (Juisi ya Ubuyu)", cents: 800 },
+  baobab: { name: "Fresh Homemade Baobab Juice (Juisi ya Ubuyu)", cents: 800, fish: [{ name: "12 oz", cents: 800 }, { name: "18 oz", cents: 1200 }, { name: "33 oz", cents: 3500 }] },
   turkey: { name: "Grilled Turkey Legs (2)", cents: 2200 },
   // Kisinia is priced by the fish picked; the first one (Mackerel) is the default.
   kisinia: {
