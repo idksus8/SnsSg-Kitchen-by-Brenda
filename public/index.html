@@ -460,7 +460,6 @@ dialog[open]::backdrop{animation:fade .25s ease}
 <section class="hero">
   <div class="hero-in">
     <div>
-      <h1>Soups, chapati and fried fish, made by Brenda</h1>
       <p>Pick what you want, add it to your order, and pay online. Brenda gets your order right away and contacts you about pickup or delivery.</p>
       <div class="tags"><span>Homemade</span><span>Cooked to order</span><span>Pickup or delivery</span><span>Pay online with Apple Pay or card</span></div>
     </div>
@@ -917,10 +916,12 @@ MENU.forEach(function(m){ $("list-"+m.cat).appendChild(makeCard(m,"card")); });
 })();
 
 // ---- Item dialog
+// Photo #25 has Brenda standing near the top, so the dish window shows it from the top instead of the middle (her face was being cut off).
+function photoPos(i){ return i===25 ? "50% 0%" : ""; }
 var cur=null, curQty=1;
 function openItem(m){
   cur=m; curQty=(m.id==="chapati")?4:1;
-  $("iImg").src=IMGS[m.img]; $("iImg").alt=m.name;
+  $("iImg").src=IMGS[m.img]; $("iImg").alt=m.name; $("iImg").style.objectPosition=photoPos(m.img);
   $("iName").textContent=m.name; $("iDesc").textContent=m.desc;
   $("iNote").value="";
   var ff=$("iFish");
@@ -958,7 +959,7 @@ function curFish(){
 // The big photo in the dish window shows the fish that is picked.
 function showFishPhoto(animate){
   var f=curFish(); if(!f||f.img==null) return;
-  var im=$("iImg"); im.src=IMGS[f.img]; im.alt=cur.name+" - "+f.name;
+  var im=$("iImg"); im.src=IMGS[f.img]; im.alt=cur.name+" - "+f.name; im.style.objectPosition=photoPos(f.img);
   if(animate){ im.classList.remove("swap"); void im.offsetWidth; im.classList.add("swap"); }
 }
 $("iFish").onchange=function(){ showFishPhoto(true); refreshItem(); };
